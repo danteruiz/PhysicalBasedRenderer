@@ -65,7 +65,7 @@ static float const TWO_PI = 2 * M_PI;
 
 static std::string const IBLTexturePath =
     resources + "images/IBL/TropicalBeach/Tropical_Beach_3k.hdr";
-Texture IBLTexture;
+TextureHandle IBLTexture;
 
 std::shared_ptr<Material> DEFAULT_MATERIAL = std::make_shared<Material>();
 
@@ -73,6 +73,7 @@ unsigned int captureFBO, captureRBO, envCubemap, irradianceMap;
 
 unsigned int prefilterMap, brdfLUTTexture;
 
+TextureCache textureCache;
 struct Camera
 {
     glm::vec3 position;
@@ -450,6 +451,8 @@ unsigned int DemoApplication::generateEnviromentMap()
     ChronoStopWatch sw("DemoApplication::generateEnviromentMap");
     unsigned int textureId;
 
+    Texture const &texture = textureCache.getTextureFromHandle(IBLTexture);
+
     spdlog::debug("DemApplication::generateEnvironmentMap");
     unsigned int frameBuffer;
     glGenFramebuffers(1, &frameBuffer);
@@ -462,7 +465,7 @@ unsigned int DemoApplication::generateEnviromentMap()
     spdlog::debug("texture id: {}", textureId);
 
     spdlog::debug("max texture size: {}", GL_MAX_TEXTURE_SIZE);
-    spdlog::debug("texture size: {}", IBLTexture.m_width * IBLTexture.m_height);
+    spdlog::debug("texture size: {}", texture.m_width * texture.m_height);
     for (unsigned int i = 0; i < 6; ++i)
     {
         glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB32F,
@@ -500,7 +503,7 @@ unsigned int DemoApplication::generateEnviromentMap()
     m_convertToCubeMap->setUniformMat4("projection", captureProjection);
     m_convertToCubeMap->setUniform1i("hdrTexture", 0);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, IBLTexture.m_id);
+    glBindTexture(GL_TEXTURE_2D, texture.m_id);
 
     glViewport(0, 0, SKYBOX_RESOLUTION, SKYBOX_RESOLUTION);
     glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
@@ -534,10 +537,11 @@ void DemoApplication::generateIBLEnvironment(std::string &texturePath)
     ChronoStopWatch sw("DemoApplication::generateIBLEnvironment");
 
     auto quad = m_modelCache->getModelShape(ModelShape::Quad);
-    IBLTexture = loadHDRTexture(texturePath);
+    IBLTexture = textureCache.loadTexture(texturePath);
 
-    spdlog::debug("texture id: {}, {}, {}", IBLTexture.m_id,
-                  IBLTexture.m_width, IBLTexture.m_height);
+    Texture const &texture = textureCache.getTextureFromHandle(IBLTexture);
+    spdlog::debug("texture id: {}, {}, {}", texture.m_id,
+                  texture.m_width, texture.m_height);
 
     unsigned int captureFBO, captureRBO;
     glEnable(GL_DEPTH_TEST);

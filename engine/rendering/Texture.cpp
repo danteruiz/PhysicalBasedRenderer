@@ -10,6 +10,7 @@
 
 #include "Texture.h"
 
+#include <cassert>
 #include <iostream>
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -18,37 +19,6 @@
 #include <stb_image.h>
 #include <stb_image_write.h>
 #include "spdlog/spdlog.h"
-
-std::shared_ptr<Texture> loadTexture(std::string path)
-{
-    std::shared_ptr<Texture> texture = std::make_shared<Texture>();
-    glGenTextures(1, &texture->m_id);
-    glBindTexture(GL_TEXTURE_2D, texture->m_id);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    int width, height, channels;
-
-    unsigned char *data =
-        stbi_load(path.c_str(), &width, &height, &channels, 0);
-
-    if (data)
-    {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB,
-                     GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else
-    {
-        std::cout << "Failed to load texture: " << path << std::endl;
-    }
-
-    stbi_image_free(data);
-    return texture;
-}
 
 std::shared_ptr<Texture> createTextureFromGLTF(int width, int height,
                                                int component, int bits,
@@ -94,74 +64,117 @@ std::shared_ptr<Texture> createTextureFromGLTF(int width, int height,
     return texture;
 }
 
-std::shared_ptr<Texture> loadCubeMap(std::array<std::string, 6> imagePaths)
+inline GLenum getGLTextureFormat(int components)
 {
-    auto texture = std::make_shared<Texture>();
-    glGenTextures(1, &texture->m_id);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, texture->m_id);
-    int width, height, nrChannels;
+    GLenum format = GL_RGBA;
 
-    for (unsigned int i = 0; i < 6; ++i)
+    switch (components)
     {
-        unsigned char *data =
-            stbi_load(imagePaths[i].c_str(), &width, &height, &nrChannels, 0);
+        case 1:
+            format = GL_RED;
+            break;
+        case 2:
+            format = GL_RG;
+            break;
+        case 3:
+            format = GL_RGB;
+            break;
 
-        if (data)
-        {
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width,
-                         height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-            stbi_image_free(data);
-        }
-        else
-        {
-            std::cout << "Failed to load: " << imagePaths[i] << std::endl;
-        }
+        default:
+            break;
     }
-
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-    return texture;
+    return format;
 }
 
-Texture loadHDRTexture(std::string path)
+inline GLenum getGLTextureType(int bits)
 {
+    GLenum type = GL_UNSIGNED_BYTE;
 
-    stbi_set_flip_vertically_on_load(true);
-    int width, height, nrComponents;
-    float *data = stbi_loadf(path.c_str(), &width, &height, &nrComponents, 0);
-
-
-    Texture IBLTexture;
-    IBLTexture.m_width = width;
-    IBLTexture.m_height = height;
-    if (data)
+    switch (bits)
     {
-        glGenTextures(1, &IBLTexture.m_id);
-        glBindTexture(GL_TEXTURE_2D, IBLTexture.m_id);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, 0, GL_RGB,
-                     GL_FLOAT, data);
+        case 16:
+            type = GL_UNSIGNED_SHORT;
+            break;
 
-        auto error = glGetError();
+        case 32:
+            type = GL_FLOAT;
+            break;
 
-        spdlog::debug("max texture size: {}", GL_MAX_TEXTURE_SIZE);
-        spdlog::debug("GL_ERROR: {}", error);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        stbi_image_free(data);
+        case 8:
+        default:
+            break;
     }
-    else
+
+    return type;
+}
+
+constexpr size_t TEXTURE_COUNT = 20;
+TextureCache::TextureCache()
+{
+    m_textures.reserve(TEXTURE_COUNT);
+}
+
+Texture const &TextureCache::getTextureFromHandle(TextureHandle textureHandle)
+{
+    assert(textureHandle >= 0 &&
+           textureHandle < static_cast<TextureHandle>(m_textures.size()));
+    return m_textures[textureHandle];
+}
+
+TextureHandle TextureCache::loadTexture(std::string const &filePath) {
+
+    auto textureHandleIter = m_textureHandleMap.find(filePath);
+
+    if (textureHandleIter != m_textureHandleMap.end())
     {
-        std::cout << "Failed to load texture: " << path << std::endl;
+        spdlog::debug("getting texture");
+        return (*textureHandleIter).second;
     }
+
+    if (stbi_is_hdr(filePath.c_str()))
+    {
+        stbi_set_flip_vertically_on_load(true);
+    }
+
+    int width, height, components;
+    float *pixels = stbi_loadf(filePath.c_str(), &width, &height,
+                               &components, 0);
 
     stbi_set_flip_vertically_on_load(false);
-    return IBLTexture;
+
+
+    TextureHandle textureHandle = createTexture(width, height, components, 32,
+                                                static_cast<void*>(pixels));
+
+    m_textureHandleMap[filePath] = textureHandle;
+
+    stbi_image_free(pixels);
+    return textureHandle;
+}
+
+TextureHandle TextureCache::createTexture(int width, int height, int component,
+                                          int bits, void const *pixels)
+{
+
+    assert(pixels);
+    Texture texture;
+    texture.m_width = width;
+    texture.m_height = height;
+    GLenum type = getGLTextureType(bits);
+    GLenum format = getGLTextureFormat(component);
+    glGenTextures(1, &texture.m_id);
+    glBindTexture(GL_TEXTURE_2D, texture.m_id);
+    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format,
+                 type, pixels);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    TextureHandle textureHandle = textureCount;
+    textureCount++;
+    m_textures.push_back(texture);
+
+    return textureHandle;
 }

@@ -95,4 +95,3 @@ private:
     std::array<Model::Pointer, ModelShape::NUM_SHAPES> m_modelShapes;
     std::unordered_map<std::string, Model::Pointer> m_models;
 };
-// Model::Pointer loadModel(std::string const &file);

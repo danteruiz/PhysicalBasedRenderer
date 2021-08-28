@@ -26,6 +26,7 @@ class ModelCache;
 class Backend;
 class DebugDraw;
 struct Marker;
+class TextureCache;
 
 class DemoApplication : public GlfwApplication
 {

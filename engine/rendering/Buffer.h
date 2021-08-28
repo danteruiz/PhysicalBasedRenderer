@@ -39,9 +39,7 @@ public:
 struct BufferView
 {
     BufferView(size_t offset, size_t size, Format format)
-        : m_offset(offset), m_size(size), m_format(format)
-    {
-    }
+        : m_offset(offset), m_size(size), m_format(format) { }
 
     size_t getStride() const;
 
