@@ -1,0 +1,21 @@
+[requires]
+glm/0.9.8.5@g-truc/stable
+glfw/3.3@bincrafters/stable
+bullet/2.87@bincrafters/stable
+glew/2.1.0@bincrafters/stable
+imgui/1.69@bincrafters/stable
+fmt/6.0.0@bincrafters/stable
+spdlog/1.8.2
+
+
+[generators]
+cmake_find_package
+cmake_paths
+
+[imports]
+./misc/bindings, imgui_impl_glfw.cpp -> ../engine/ui/imgui/bindings
+./misc/bindings, imgui_impl_opengl3.cpp -> ../engine/ui/imgui/bindings
+./misc/bindings, imgui_impl_glfw.h -> ../engine/ui/imgui/bindings
+./misc/bindings, imgui_impl_opengl3.h -> ../engine/ui/imgui/bindings
+./misc/cpp/, imgui_stdlib.h -> ../engine/ui/imgui/bindings
+./misc/cpp/, imgui_stdlib.cpp -> ../engine/ui/imgui/bindings

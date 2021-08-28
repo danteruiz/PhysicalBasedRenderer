@@ -1,0 +1,24 @@
+#include "IBLEnvironments.h"
+
+namespace ibl
+{
+    std::string getIBLEnvironmentPath(int iblIndex)
+    {
+        static std::vector<std::string> const iblPaths = {
+            @IBL_PATHS@
+        };
+
+
+        return iblPaths[iblIndex];
+    }
+
+
+    std::vector<std::string> getIBLNames()
+    {
+        static std::vector<std::string> IBLNames = {
+            @IBL_NAMES@
+        };
+
+        return IBLNames;
+    }
+}

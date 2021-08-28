@@ -1,0 +1,29 @@
+#include "ModelPaths.h"
+
+namespace gltfModels
+{
+    std::string getModelPath(int modelIndex) {
+        static const std::vector<std::string> modelPaths = {
+            @MODEL_PATHS@
+        };
+
+        return modelPaths[modelIndex];
+    }
+
+
+    static std::vector<std::string> modelNames = {
+        @MODEL_NAMES@
+    };
+
+    std::string getModelName(int modelIndex) {
+        return modelNames[modelIndex];
+    }
+
+
+    std::vector<std::string> getModelNames()
+    {
+        return modelNames;
+    }
+}
+
+

@@ -1,0 +1,16 @@
+#pragma once
+
+#include <string>
+#include <vector>
+
+namespace ibl
+{
+    enum Environments
+    {
+        @IBL_ENUMS_NAMES@
+        NUM_MODELS
+    };
+
+    std::string getIBLEnvironmentPath(int iblIndex);
+    std::vector<std::string> getIBLNames();
+}
