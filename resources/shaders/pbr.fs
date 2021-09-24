@@ -121,7 +121,6 @@ void main() {
     pbrInfo.metallic *= mrSample.b;
 #endif
 
-
     pbrInfo.albedoColor = pbrInfo.baseColor * (vec3(1.0) - f0);
     pbrInfo.albedoColor *= 1.0 - pbrInfo.metallic;
     pbrInfo.f0 = mix(f0, pbrInfo.baseColor.rgb, pbrInfo.metallic);

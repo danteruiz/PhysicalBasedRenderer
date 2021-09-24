@@ -40,6 +40,7 @@
 #include <imgui/Imgui.h>
 #include <math.h>
 #include <spdlog/spdlog.h>
+#include <FileSystem.h>
 
 static std::string resources = RESOURCE_PATH;
 static const std::string shaderPath = std::string(RESOURCE_PATH) + "shaders/";
@@ -62,9 +63,6 @@ static glm::vec3 const UNIT_X(1.0f, 0.0f, 0.0f);
 static glm::vec3 const UNIT_Y(0.0f, 1.0f, 0.0f);
 
 static float const TWO_PI = 2 * M_PI;
-
-static std::string const IBLTexturePath =
-    resources + "images/IBL/TropicalBeach/Tropical_Beach_3k.hdr";
 TextureHandle IBLTexture;
 
 std::shared_ptr<Material> DEFAULT_MATERIAL = std::make_shared<Material>();
@@ -363,7 +361,6 @@ void drawSkybox(Skybox const &skybox, RenderArgs const &renderArgs,
 
 void DemoApplication::exec()
 {
-    //    spdlog::debug("DemoApplication::exec");
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_DEPTH_TEST);
@@ -372,8 +369,12 @@ void DemoApplication::exec()
 
     Clock clock;
 
+    filesystem::FileWatcher fileWatcher;
+
+    fileWatcher.watchFile(fragmentShader, nullptr);
     while (!m_window->shouldClose())
     {
+        fileWatcher.checkForFilesUpdate();
         auto deltaTime = clock.getDeltaTime();
         m_window->simpleUpdate();
         mouse->update();
