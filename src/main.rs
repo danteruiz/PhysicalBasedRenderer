@@ -22,7 +22,7 @@ enum Topology {
 
 #[repr(u8)]
 enum Type {
-    Float,
+    Float = 0,
     Int8,
     Int16,
     Int32,
@@ -34,13 +34,18 @@ enum Type {
 
 #[repr(u8)]
 enum Dimension {
-    Scalar,
+    Scalar = 0,
     Vec2,
     Vec3,
     Vec4,
     Num,
 }
-struct Format {}
+struct Format {
+    dimension: Dimension,
+}
+
+const TYPE_SIZE: [usize; Type::Num as usize] = [4, 2, 4, 1, 4, 2, 1];
+const DIMENSION_SIZE: [usize; Dimension::Num as usize] = [1, 2, 3, 4];
 struct BufferView {
     offset: usize,
     size: usize,
@@ -52,9 +57,9 @@ struct Buffer {
 }
 
 struct SubMesh {
-    start_index: u32,
-    num_indices: u32,
-    material_index: u32,
+    start_index: usize,
+    num_indices: usize,
+    material_index: usize,
 }
 
 struct Mesh {
@@ -63,48 +68,42 @@ struct Mesh {
     index_buffer: Buffer,
 }
 
+struct Model {
+    meshes: Vec<Mesh>,
+}
+
 fn main() {
-    let (gltf, buffers, _) = gltf::import(
-        "resources/glTF-models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb",
-    )
-    .expect("Failed to load file");
+    println!("TYPE_SIZE");
+    for value in TYPE_SIZE {
+        println!("#{:?}", value)
+    }
 
-    // let gltf = gltf::Gltf::open(
-    //     "resources/glTF-models/DamagedHelmet/glTF/DamagedHelmet.gltf",
-    // )
-    // .expect("Failed to load file");
+    println!("DIMENSION_SIZE");
 
-    // for scene in gltf.scenes() {
-    //     for node in scene.nodes() {
-    //         println!(
-    //             "Node #{} has {} children",
-    //             node.index(),
-    //             node.children().count()
-    //         );
+    for value in DIMENSION_SIZE {
+        println!("#{:?}", value);
+    }
+    // let (gltf, buffers, _) =
+    //     gltf::import("resources/glTF-models/DamagedHelmet.glb").expect("Failed to load file");
     //
-    //         let mesh = node.mesh().expect("expected to get a mesh");
+    // for value in TYPE_SIZE {}
     //
-    //         for primitive in mesh.primitives() {
-    //             println!("- Primitive #{}", primitive.index());
+    // let model: Model = Model { meshes: Vec::new() };
+    // for mesh in gltf.meshes() {
+    //     let positions: Vec<f32> = Vec::new();
+    //     let normals: Vec<f32> = Vec::new();
+    //     let tex_coords: Vec<f32> = Vec::new();
     //
-    //             let reader =
-    //                 primitive.reader(|buffer| Some(&buffers[buffer.index()]));
+    //     for primitive in mesh.primitives() {
+    //         let reader = primitive.reader(|buffer| Some(&buffers[buffer.index()]));
     //
-    //             let iter = reader.read_normals().expect("expected position");
+    //         let iter = reader.read_normals().expect("expected position");
     //
-    //             for vertex_position in iter {
-    //                 println!("{:?}", vertex_position);
-    //             }
-    //             // if Some(iter) = reader.read_positions() {
-    //             //     for vertex_position in iter {
-    //             //         println!("{:?}", vertex_position);
-    //             //     }
-    //             // }
-    //         }
+    //         for vertex_position in iter {}
     //     }
     // }
-
-    println!("after loading the data");
+    //
+    // println!("after loading the data");
     // glfw::init_hint(glfw::InitHint::JoystickHatButtons(false));
     // let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
     //
