@@ -10,6 +10,7 @@ extern crate glfw;
 extern crate gltf;
 
 use glfw::Context;
+use std::fmt;
 use std::mem;
 
 #[repr(u8)]
@@ -44,6 +45,26 @@ struct Format {
     dimension: Dimension,
 }
 
+#[repr(u8)]
+enum Slot {
+    Position = 0,
+    Normal,
+    TexCoord,
+    Color,
+}
+
+struct Attribute {
+    format: Format,
+    slot: Slot,
+    offset: usize,
+}
+
+impl Attribute {
+    fn get_total_offset(self) -> usize {
+        return self.offset;
+    }
+}
+
 const TYPE_SIZE: [usize; Type::Num as usize] = [4, 2, 4, 1, 4, 2, 1];
 const DIMENSION_SIZE: [usize; Dimension::Num as usize] = [1, 2, 3, 4];
 struct BufferView {
@@ -51,6 +72,7 @@ struct BufferView {
     size: usize,
     format: Format,
 }
+
 struct Buffer {
     data: Vec<u8>,
     dirty: bool,
@@ -72,37 +94,67 @@ struct Model {
     meshes: Vec<Mesh>,
 }
 
+fn get_buffer_data(
+    semantic: gltf::mesh::Semantic,
+    primitive: &gltf::Primitive,
+    buffers: &Vec<gltf::buffer::Data>,
+) -> Vec<u8> {
+    let accessor = primitive
+        .get(&semantic)
+        .expect(format!("no eccessor for type {:?}", semantic).as_str());
+
+    let buffer_view = accessor
+        .view()
+        .expect(format!("Failed to get buffer for accessor {:?}", semantic).as_str());
+
+    let buffer = buffer_view.buffer();
+
+    let buffer_data = buffers
+        .get(buffer.index())
+        .expect(format!("Failed to get buffer_data for accessor {:?}", semantic).as_str());
+
+    let start = buffer_view.offset();
+    let end = start + buffer_view.length();
+    let buffer_data_slice = &buffer_data[start..end];
+
+    for value in buffer_data_slice {
+        println!("value {}", value);
+    }
+
+    return Vec::new();
+}
+
 fn main() {
-    println!("TYPE_SIZE");
-    for value in TYPE_SIZE {
-        println!("#{:?}", value)
+    let (gltf, buffers, _) =
+        gltf::import("resources/glTF-models/DamagedHelmet.glb").expect("Failed to load file");
+
+    let model: Model = Model { meshes: Vec::new() };
+    for mesh in gltf.meshes() {
+        let mut positions: Vec<u8> = Vec::new();
+        let mut normals: Vec<u8> = Vec::new();
+        let mut tex_coords: Vec<u8> = Vec::new();
+
+        let indices: Vec<u32> = Vec::new();
+
+        for primitive in mesh.primitives() {
+            positions.append(&mut get_buffer_data(
+                gltf::mesh::Semantic::Positions,
+                &primitive,
+                &buffers,
+            ));
+            // normals.append(&mut get_buffer_data(
+            //     gltf::mesh::Semantic::Normals,
+            //     &primitive,
+            //     &buffers,
+            // ));
+            // tex_coords.append(&mut get_buffer_data(
+            //     gltf::mesh::Semantic::TexCoords(0),
+            //     &primitive,
+            //     &buffers,
+            // ));
+        }
     }
 
-    println!("DIMENSION_SIZE");
-
-    for value in DIMENSION_SIZE {
-        println!("#{:?}", value);
-    }
-    // let (gltf, buffers, _) =
-    //     gltf::import("resources/glTF-models/DamagedHelmet.glb").expect("Failed to load file");
-    //
-    // for value in TYPE_SIZE {}
-    //
-    // let model: Model = Model { meshes: Vec::new() };
-    // for mesh in gltf.meshes() {
-    //     let positions: Vec<f32> = Vec::new();
-    //     let normals: Vec<f32> = Vec::new();
-    //     let tex_coords: Vec<f32> = Vec::new();
-    //
-    //     for primitive in mesh.primitives() {
-    //         let reader = primitive.reader(|buffer| Some(&buffers[buffer.index()]));
-    //
-    //         let iter = reader.read_normals().expect("expected position");
-    //
-    //         for vertex_position in iter {}
-    //     }
-    // }
-    //
     // println!("after loading the data");
     // glfw::init_hint(glfw::InitHint::JoystickHatButtons(false));
     // let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
