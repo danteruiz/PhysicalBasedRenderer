@@ -62,14 +62,11 @@ template <typename T>
 void processIndexData(T const *gltfIndices, std::vector<uint32_t> &indices,
                       size_t count, size_t startIndex)
 {
-
-    uint32_t max = 0;
     for (size_t index = 0; index < count; index++)
     {
         uint32_t indice = static_cast<uint32_t>(gltfIndices[index]) +
                           static_cast<uint32_t>(startIndex);
 
-        max = std::max(indice, max);
         indices.push_back(indice);
     }
 }

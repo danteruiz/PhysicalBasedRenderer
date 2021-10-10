@@ -25,3 +25,4 @@ void Joystick::update()
     }
     glfwGetGamepadState(m_joystickIndex, &m_gamepadState);
 }
+
