@@ -247,7 +247,6 @@ fn main() {
         }
     });
 }
-// ClientApiHint::NoApi;
 
 #[cfg(test)]
 mod test {

@@ -1,15 +1,15 @@
+// vec3.rs
+//
+// Created on 2021/10/12 by Dante Ruiz
+// Copyright 2021 Dante Ruiz
+//
+// Distributed under the MIT Lisense
+// https://mit-license.org/
+
 use std::cmp::PartialEq;
 use std::ops::{Add, Mul, Sub};
 
-// pub struct Vec2 {
-//     pub x: f32,
-//     pub y: f32,
-// }
-//
-// impl Vec2 {
-//     pub fn cross(v1: &Vec2, v2: &Vec2) {}
-// }
-
+// Vec3
 #[derive(Debug)]
 pub struct Vec3 {
     pub x: f32,
@@ -47,14 +47,6 @@ impl Mul<f32> for Vec3 {
             y: scalar * self.y,
             z: scalar * self.z,
         }
-    }
-}
-
-impl Mul<Vec3> for f32 {
-    type Output = Vec3;
-
-    fn mul(self, vec: Vec3) -> Vec3 {
-        vec * self
     }
 }
 
