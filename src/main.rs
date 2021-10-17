@@ -207,6 +207,9 @@ fn main() {
         });
     }
 
+    let mat = math::Mat3::new();
+
+    println!("{:?}", mat);
     let mut clock: clock::Clock = clock::Clock::new();
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;

@@ -7,10 +7,13 @@
 // https://mit-license.org/
 
 use std::cmp::PartialEq;
-use std::ops::{Add, Mul, Sub};
+use std::convert::From;
+use std::ops::{Add, Div, Index, IndexMut, Mul, Sub};
+
+use crate::math::shared::Array3D;
 
 // Vec3
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,
@@ -50,6 +53,17 @@ impl Mul<f32> for Vec3 {
     }
 }
 
+impl Mul for Vec3 {
+    type Output = Self;
+    fn mul(self, v: Self) -> Self {
+        Self {
+            x: self.x * v.x,
+            y: self.y * v.y,
+            z: self.z * v.z,
+        }
+    }
+}
+
 impl Sub for Vec3 {
     type Output = Self;
     fn sub(self, other: Self) -> Self {
@@ -57,6 +71,17 @@ impl Sub for Vec3 {
             x: self.x - other.x,
             y: self.y - other.y,
             z: self.z - other.z,
+        }
+    }
+}
+
+impl Div<f32> for Vec3 {
+    type Output = Self;
+    fn div(self, scalar: f32) -> Self {
+        Self {
+            x: self.x / scalar,
+            y: self.y / scalar,
+            z: self.z / scalar,
         }
     }
 }
@@ -72,6 +97,16 @@ impl Add for Vec3 {
     }
 }
 
+impl From<Array3D> for Vec3 {
+    fn from(array: Array3D) -> Vec3 {
+        Vec3 {
+            x: array[0],
+            y: array[1],
+            z: array[3],
+        }
+    }
+}
+
 impl PartialEq for Vec3 {
     fn eq(&self, other: &Self) -> bool {
         self.x == other.x && self.y == other.y && self.z == other.z
@@ -79,5 +114,28 @@ impl PartialEq for Vec3 {
 
     fn ne(&self, other: &Self) -> bool {
         !(self == other)
+    }
+}
+
+impl Index<usize> for Vec3 {
+    type Output = f32;
+    fn index(&self, index: usize) -> &f32 {
+        match index {
+            0 => &self.x,
+            1 => &self.y,
+            2 => &self.z,
+            _ => panic!("Vec3 indexout of bound: {}", index),
+        }
+    }
+}
+
+impl IndexMut<usize> for Vec3 {
+    fn index_mut(&mut self, index: usize) -> &mut f32 {
+        match index {
+            0 => &mut self.x,
+            1 => &mut self.y,
+            2 => &mut self.z,
+            _ => panic!("Vec3 indexout of bound: {}", index),
+        }
     }
 }

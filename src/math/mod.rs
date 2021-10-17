@@ -11,3 +11,8 @@ pub use vec3::Vec3;
 
 mod vec4;
 pub use vec4::Vec4;
+
+mod mat3;
+pub use mat3::Mat3;
+
+mod shared;
