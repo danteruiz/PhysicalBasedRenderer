@@ -12,7 +12,6 @@ extern crate gltf;
 extern crate glutin;
 extern crate winit;
 
-mod clock;
 mod math;
 
 use glutin::{
@@ -207,10 +206,6 @@ fn main() {
         });
     }
 
-    let mat = math::Mat3::new();
-
-    println!("{:?}", mat);
-    let mut clock: clock::Clock = clock::Clock::new();
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
 
@@ -218,10 +213,7 @@ fn main() {
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
                 ..
-            } => {
-                println!("The close button was pressed; stopping");
-                *control_flow = ControlFlow::Exit
-            }
+            } => *control_flow = ControlFlow::Exit,
             Event::MainEventsCleared => {
                 // Application update code.
 
@@ -249,55 +241,4 @@ fn main() {
             _ => (),
         }
     });
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    #[test]
-    fn vec3_dot() {
-        let v1 = math::Vec3::new(3.0, -2.0, 7.0);
-        let v2 = math::Vec3::new(0.0, 4.0, -1.0);
-
-        let result = -15.0;
-        assert_eq!(math::Vec3::dot(&v1, &v2), result);
-    }
-
-    #[test]
-    fn vec3_cross() {
-        let v1 = math::Vec3::new(1.0, 3.0, 4.0);
-        let v2 = math::Vec3::new(2.0, -5.0, 8.0);
-
-        let result = math::Vec3::new(44.0, 0.0, -11.0);
-        assert_eq!(math::Vec3::cross(&v1, &v2), result);
-    }
-
-    #[test]
-    fn vec3_add() {
-        let v1 = math::Vec3::new(1.0, 2.0, 3.0);
-        let v2 = math::Vec3::new(4.0, 5.0, 6.0);
-
-        let result = math::Vec3::new(5.0, 7.0, 9.0);
-
-        assert_eq!(v1 + v2, result);
-    }
-
-    #[test]
-    fn vec3_sub() {
-        let v1 = math::Vec3::new(1.0, 2.0, 3.0);
-        let v2 = math::Vec3::new(4.0, 5.0, 6.0);
-
-        let result = math::Vec3::new(-3.0, -3.0, -3.0);
-        assert_eq!(v1 - v2, result);
-    }
-
-    #[test]
-    fn vec3_add_sub() {
-        let v1 = math::Vec3::new(4.0, 5.0, 6.0);
-        let v2 = math::Vec3::new(7.0, -3.0, 0.0);
-        let v3 = math::Vec3::new(1.0, 2.0, 3.0);
-
-        let result = math::Vec3::new(10.0, 0.0, 3.0);
-        assert_eq!(v1 + v2 - v3, result);
-    }
 }

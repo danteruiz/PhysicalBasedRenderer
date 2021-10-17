@@ -7,10 +7,8 @@
 // https://mit-license.org/
 
 use std::cmp::PartialEq;
-use std::convert::From;
+//use std::convert::From;
 use std::ops::{Add, Div, Index, IndexMut, Mul, Sub};
-
-use crate::math::shared::Array3D;
 
 // Vec3
 #[derive(Debug, Copy, Clone)]
@@ -97,16 +95,6 @@ impl Add for Vec3 {
     }
 }
 
-impl From<Array3D> for Vec3 {
-    fn from(array: Array3D) -> Vec3 {
-        Vec3 {
-            x: array[0],
-            y: array[1],
-            z: array[3],
-        }
-    }
-}
-
 impl PartialEq for Vec3 {
     fn eq(&self, other: &Self) -> bool {
         self.x == other.x && self.y == other.y && self.z == other.z
@@ -124,7 +112,7 @@ impl Index<usize> for Vec3 {
             0 => &self.x,
             1 => &self.y,
             2 => &self.z,
-            _ => panic!("Vec3 indexout of bound: {}", index),
+            _ => panic!("Vec3 index out of bound: {}", index),
         }
     }
 }
@@ -135,7 +123,59 @@ impl IndexMut<usize> for Vec3 {
             0 => &mut self.x,
             1 => &mut self.y,
             2 => &mut self.z,
-            _ => panic!("Vec3 indexout of bound: {}", index),
+            _ => panic!("Vec3 index out of bound: {}", index),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dot() {
+        let v1 = Vec3::new(3.0, -2.0, 7.0);
+        let v2 = Vec3::new(0.0, 4.0, -1.0);
+
+        let result = -15.0;
+        assert_eq!(Vec3::dot(&v1, &v2), result);
+    }
+
+    #[test]
+    fn cross() {
+        let v1 = Vec3::new(1.0, 3.0, 4.0);
+        let v2 = Vec3::new(2.0, -5.0, 8.0);
+
+        let result = Vec3::new(44.0, 0.0, -11.0);
+        assert_eq!(Vec3::cross(&v1, &v2), result);
+    }
+
+    #[test]
+    fn add() {
+        let v1 = Vec3::new(1.0, 2.0, 3.0);
+        let v2 = Vec3::new(4.0, 5.0, 6.0);
+
+        let result = Vec3::new(5.0, 7.0, 9.0);
+
+        assert_eq!(v1 + v2, result);
+    }
+
+    #[test]
+    fn sub() {
+        let v1 = Vec3::new(1.0, 2.0, 3.0);
+        let v2 = Vec3::new(4.0, 5.0, 6.0);
+
+        let result = Vec3::new(-3.0, -3.0, -3.0);
+        assert_eq!(v1 - v2, result);
+    }
+
+    #[test]
+    fn add_sub() {
+        let v1 = Vec3::new(4.0, 5.0, 6.0);
+        let v2 = Vec3::new(7.0, -3.0, 0.0);
+        let v3 = Vec3::new(1.0, 2.0, 3.0);
+
+        let result = Vec3::new(10.0, 0.0, 3.0);
+        assert_eq!(v1 + v2 - v3, result);
     }
 }

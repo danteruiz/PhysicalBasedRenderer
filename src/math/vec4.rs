@@ -7,11 +7,11 @@
 // https://mit-license.org/
 
 use std::cmp::PartialEq;
-use std::ops::{Add, Mul, Sub};
+use std::ops::{Add, Index, IndexMut, Mul, Sub};
 
 use crate::math::vec3::Vec3;
 // Vec4
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Vec4 {
     pub x: f32,
     pub y: f32,
@@ -20,6 +20,14 @@ pub struct Vec4 {
 }
 
 impl Vec4 {
+    pub fn new(x: f32, y: f32, z: f32, w: f32) -> Vec4 {
+        Vec4 {
+            x: x,
+            y: y,
+            z: z,
+            w: w,
+        }
+    }
     pub fn inverse(self) -> Vec4 {
         self * -1.0
     }
@@ -86,6 +94,18 @@ impl Mul<Vec4> for f32 {
     }
 }
 
+impl Mul for Vec4 {
+    type Output = Self;
+    fn mul(self, v: Self) -> Self {
+        Self {
+            x: v.x * self.x,
+            y: v.y * self.y,
+            z: v.z * self.z,
+            w: v.w * self.w,
+        }
+    }
+}
+
 impl PartialEq for Vec4 {
     fn eq(&self, other: &Self) -> bool {
         self.x == other.x && self.y == other.y && self.z == other.z && self.w == other.w
@@ -93,5 +113,82 @@ impl PartialEq for Vec4 {
 
     fn ne(&self, other: &Self) -> bool {
         !(self == other)
+    }
+}
+
+impl Index<usize> for Vec4 {
+    type Output = f32;
+    fn index(&self, index: usize) -> &f32 {
+        match index {
+            0 => &self.x,
+            1 => &self.y,
+            2 => &self.z,
+            3 => &self.w,
+            _ => panic!("Vec4 index out of bound: {}", index),
+        }
+    }
+}
+
+impl IndexMut<usize> for Vec4 {
+    fn index_mut(&mut self, index: usize) -> &mut f32 {
+        match index {
+            0 => &mut self.x,
+            1 => &mut self.y,
+            2 => &mut self.z,
+            3 => &mut self.w,
+            _ => panic!("Vec4 index out of bound: {}", index),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // #[test]
+    // fn dot() {
+    //     let v1 = Vec3::new(3.0, -2.0, 7.0);
+    //     let v2 = Vec3::new(0.0, 4.0, -1.0);
+    //
+    //     let result = -15.0;
+    //     assert_eq!(Vec3::dot(&v1, &v2), result);
+    // }
+    //
+    // #[test]
+    // fn cross() {
+    //     let v1 = Vec3::new(1.0, 3.0, 4.0);
+    //     let v2 = Vec3::new(2.0, -5.0, 8.0);
+    //
+    //     let result = Vec3::new(44.0, 0.0, -11.0);
+    //     assert_eq!(Vec3::cross(&v1, &v2), result);
+    // }
+
+    #[test]
+    fn add() {
+        let v1 = Vec4::new(1.0, 2.0, 3.0, 2.0);
+        let v2 = Vec4::new(4.0, 5.0, 6.0, 3.0);
+
+        let result = Vec4::new(5.0, 7.0, 9.0, 5.0);
+
+        assert_eq!(v1 + v2, result);
+    }
+
+    #[test]
+    fn sub() {
+        let v1 = Vec4::new(1.0, 2.0, 3.0, 4.0);
+        let v2 = Vec4::new(4.0, 5.0, 6.0, 7.0);
+
+        let result = Vec4::new(-3.0, -3.0, -3.0, -3.0);
+        assert_eq!(v1 - v2, result);
+    }
+
+    #[test]
+    fn add_sub() {
+        let v1 = Vec4::new(4.0, 5.0, 6.0, 10.0);
+        let v2 = Vec4::new(7.0, -3.0, 0.0, -5.0);
+        let v3 = Vec4::new(1.0, 2.0, 3.0, 2.0);
+
+        let result = Vec4::new(10.0, 0.0, 3.0, 3.0);
+        assert_eq!(v1 + v2 - v3, result);
     }
 }
