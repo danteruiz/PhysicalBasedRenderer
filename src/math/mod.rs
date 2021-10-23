@@ -8,14 +8,13 @@
 
 mod vec3;
 pub use vec3::Vec3;
-
 mod vec4;
 pub use vec4::Vec4;
-
 mod mat3;
 pub use mat3::Mat3;
-
 mod mat4;
 pub use mat4::Mat4;
-
+mod ops;
+mod point3;
+pub use point3::Point3;
 mod shared;

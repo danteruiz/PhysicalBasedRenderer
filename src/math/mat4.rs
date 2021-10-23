@@ -31,6 +31,12 @@ impl Mat4 {
             ],
         }
     }
+
+    pub fn zero() -> Mat4 {
+        Mat4 {
+            n: [Vec4::zero(), Vec4::zero(), Vec4::zero(), Vec4::zero()],
+        }
+    }
 }
 
 impl Index<usize> for Mat4 {

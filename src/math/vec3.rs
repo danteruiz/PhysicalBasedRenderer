@@ -6,8 +6,10 @@
 // Distributed under the MIT Lisense
 // https://mit-license.org/
 
+use crate::math::ops::{Cross, Dot};
+use crate::math::point3::Point3;
+
 use std::cmp::PartialEq;
-//use std::convert::From;
 use std::ops::{Add, Div, Index, IndexMut, Mul, Sub};
 
 // Vec3
@@ -23,23 +25,35 @@ impl Vec3 {
         Vec3 { x: x, y: y, z: z }
     }
 
-    pub fn cross(v1: &Vec3, v2: &Vec3) -> Vec3 {
-        Vec3 {
-            x: v1.y * v2.z - v1.z * v2.y,
-            y: v1.z * v2.x - v1.x * v2.z,
-            z: v1.x * v2.y - v1.y * v2.x,
-        }
-    }
-
-    pub fn dot(v1: &Vec3, v2: &Vec3) -> f32 {
-        v1.x * v2.x + v1.y * v2.y + v1.z * v2.z
-    }
-
     pub fn inverse(self) -> Vec3 {
-        self * -1.0
+        self.clone() * -1.0
     }
 }
 
+impl Cross for Vec3 {
+    type Output = Self;
+    fn cross(&self, v2: &Self) -> Vec3 {
+        Vec3 {
+            x: self.y * v2.z - self.z * v2.y,
+            y: self.z * v2.x - self.x * v2.z,
+            z: self.x * v2.y - self.y * v2.x,
+        }
+    }
+}
+
+impl Dot for Vec3 {
+    type Output = Self;
+    fn dot(&self, v2: &Self) -> f32 {
+        self.x * v2.x + self.y * v2.y + self.z * v2.z
+    }
+}
+
+impl Dot<&Point3> for Vec3 {
+    type Output = Self;
+    fn dot(&self, p: &&Point3) -> f32 {
+        self.x * p.x + self.y * p.y + self.z * p.z
+    }
+}
 impl Mul<f32> for Vec3 {
     type Output = Self;
     fn mul(self, scalar: f32) -> Self {

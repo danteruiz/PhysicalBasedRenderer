@@ -7,8 +7,10 @@
 // https://mit-license.org/
 
 use std::cmp::PartialEq;
+use std::convert::From;
 use std::ops::{Add, Index, IndexMut, Mul, Sub};
 
+use crate::math::point3::Point3;
 use crate::math::vec3::Vec3;
 // Vec4
 #[derive(Debug, Copy, Clone)]
@@ -28,24 +30,38 @@ impl Vec4 {
             w: w,
         }
     }
-    pub fn inverse(self) -> Vec4 {
-        self * -1.0
-    }
 
-    pub fn to_vec3(v: Vec4) -> Vec3 {
-        Vec3 {
-            x: v.x,
-            y: v.y,
-            z: v.z,
+    pub fn zero() -> Vec4 {
+        Vec4 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 0.0,
         }
     }
+    pub fn inverse(self) -> Vec4 {
+        self.clone() * -1.0
+    }
+}
 
-    pub fn from_vec3(v: Vec3) -> Vec4 {
+impl From<Vec3> for Vec4 {
+    fn from(v: Vec3) -> Vec4 {
         Vec4 {
             x: v.x,
             y: v.y,
             z: v.z,
             w: 0.0,
+        }
+    }
+}
+
+impl From<Point3> for Vec4 {
+    fn from(p: Point3) -> Vec4 {
+        Vec4 {
+            x: p.x,
+            y: p.y,
+            z: p.z,
+            w: 1.0,
         }
     }
 }
@@ -189,6 +205,7 @@ mod tests {
         let v3 = Vec4::new(1.0, 2.0, 3.0, 2.0);
 
         let result = Vec4::new(10.0, 0.0, 3.0, 3.0);
+
         assert_eq!(v1 + v2 - v3, result);
     }
 }
