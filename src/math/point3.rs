@@ -6,9 +6,10 @@
 // Distributed under the MIT Lisense
 // https://mit-license.org/
 
-use crate::math::ops::{Cross, Dot};
+//use crate::math::ops::{Cross, Dot};
 use crate::math::vec3::Vec3;
-use std::ops::{Add, Div, Index, IndexMut, Mul, Sub};
+//use std::ops::{Add, Div, Index, IndexMut, Mul, Sub};
+use std::ops::{Mul, Sub};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Point3 {

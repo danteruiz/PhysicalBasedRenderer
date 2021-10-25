@@ -8,13 +8,12 @@
 use gl33::{gl_core_types::*, gl_enumerations::*, global_loader::*};
 use std::ffi::CString;
 use std::fs;
-use std::ptr;
 
 //pub struct Shader {}
 static SHADER_BASE_PATH: &'static str = "resources/shaders/";
 
 pub struct Pipeline {
-    id: u32,
+    pub id: u32,
 }
 
 fn parse_shader_file(shader_file: &str) -> String {

@@ -8,6 +8,7 @@
 
 use std::cmp::PartialEq;
 use std::convert::From;
+use std::fmt;
 use std::ops::{Add, Index, IndexMut, Mul, Sub};
 
 use crate::math::point3::Point3;
@@ -154,6 +155,12 @@ impl IndexMut<usize> for Vec4 {
             3 => &mut self.w,
             _ => panic!("Vec4 index out of bound: {}", index),
         }
+    }
+}
+
+impl fmt::Display for Vec4 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({}, {}, {}, {})", self.x, self.y, self.z, self.w)
     }
 }
 

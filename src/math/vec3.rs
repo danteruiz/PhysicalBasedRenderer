@@ -6,7 +6,7 @@
 // Distributed under the MIT Lisense
 // https://mit-license.org/
 
-use crate::math::ops::{Cross, Dot};
+use crate::math::ops::{Cross, Dot, Normalize};
 use crate::math::point3::Point3;
 
 use std::cmp::PartialEq;
@@ -43,8 +43,8 @@ impl Cross for Vec3 {
 
 impl Dot for Vec3 {
     type Output = Self;
-    fn dot(&self, v2: &Self) -> f32 {
-        self.x * v2.x + self.y * v2.y + self.z * v2.z
+    fn dot(&self, v: &Self) -> f32 {
+        self.x * v.x + self.y * v.y + self.z * v.z
     }
 }
 
@@ -52,6 +52,13 @@ impl Dot<&Point3> for Vec3 {
     type Output = Self;
     fn dot(&self, p: &&Point3) -> f32 {
         self.x * p.x + self.y * p.y + self.z * p.z
+    }
+}
+
+impl Normalize for Vec3 {
+    fn normalize(&self) -> Vec3 {
+        let magnitude = (self.x * self.x + self.y * self.y + self.z * self.z).sqrt();
+        return *self / magnitude;
     }
 }
 impl Mul<f32> for Vec3 {
@@ -191,5 +198,13 @@ mod tests {
 
         let result = Vec3::new(10.0, 0.0, 3.0);
         assert_eq!(v1 + v2 - v3, result);
+    }
+
+    #[test]
+    fn normalize() {
+        let v = Vec3::new(0.0, 0.0, -10.0);
+        let result = Vec3::new(0.0, 0.0, -1.0);
+
+        assert_eq!(v.normalize(), result);
     }
 }

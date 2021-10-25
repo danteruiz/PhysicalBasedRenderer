@@ -8,6 +8,7 @@
 
 use crate::math::vec4::Vec4;
 use std::cmp::PartialEq;
+use std::fmt;
 use std::ops::{Index, IndexMut, Mul};
 
 #[derive(Debug, Copy, Clone)]
@@ -36,6 +37,10 @@ impl Mat4 {
         Mat4 {
             n: [Vec4::zero(), Vec4::zero(), Vec4::zero(), Vec4::zero()],
         }
+    }
+
+    pub fn as_ptr(&self) -> *const f32 {
+        &self[0].x
     }
 }
 
@@ -162,6 +167,17 @@ impl PartialEq for Mat4 {
 
     fn ne(&self, other: &Self) -> bool {
         !(self == other)
+    }
+}
+
+impl fmt::Display for Mat4 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let x = self[0];
+        let y = self[1];
+        let z = self[2];
+        let w = self[3];
+
+        write!(f, "x: {}, y: {}, z: {}, w: {}", x, y, z, w)
     }
 }
 
