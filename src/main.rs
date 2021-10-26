@@ -208,8 +208,13 @@ struct Model {
 // glfw::init_hint(glfw::InitHint::JoystickHatButtons(false));
 // let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
 
-fn to_byte_slice<'a>(floats: &'a [f32]) -> &'a [u8] {
-    unsafe { std::slice::from_raw_parts(floats.as_ptr() as *const _, floats.len() * 4) }
+fn to_byte_slice<'a, T>(floats: &'a [T]) -> &'a [u8] {
+    unsafe {
+        std::slice::from_raw_parts(
+            floats.as_ptr() as *const _,
+            floats.len() * std::mem::size_of::<T>(),
+        )
+    }
 }
 const WINDOW_TITLE: &'static str = "Physical Based Renderer";
 
@@ -293,8 +298,8 @@ fn generate_sphere_model() -> Model {
     buffer_data.extend_from_slice(to_byte_slice(&normals[..]));
     let vertex_buffer: Buffer = Buffer { data: buffer_data };
 
-    let index_buffer_data: Vec<u8> = Vec::new();
-    //index_buffer_data.extend_from_slice(to_byte_slice(&indices[..]));
+    let mut index_buffer_data: Vec<u8> = Vec::new();
+    index_buffer_data.extend_from_slice(to_byte_slice(&indices[..]));
     let index_buffer: Buffer = Buffer {
         data: index_buffer_data,
     };
@@ -307,8 +312,8 @@ fn generate_sphere_model() -> Model {
         glBindBuffer(GL_ARRAY_BUFFER, vertex_id);
         glBufferData(
             GL_ARRAY_BUFFER,
-            (positions.len() * std::mem::size_of::<f32>()) as isize,
-            positions.as_ptr().cast(),
+            (vertex_buffer.data.len() * std::mem::size_of::<u8>()) as isize,
+            vertex_buffer.data.as_ptr().cast(),
             GL_STATIC_DRAW,
         );
 
@@ -316,8 +321,8 @@ fn generate_sphere_model() -> Model {
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_id);
         glBufferData(
             GL_ELEMENT_ARRAY_BUFFER,
-            (indices.len() * std::mem::size_of::<u32>()) as isize,
-            indices.as_ptr().cast(),
+            (index_buffer.data.len() * std::mem::size_of::<u8>()) as isize,
+            index_buffer.data.as_ptr().cast(),
             GL_STATIC_DRAW,
         );
     }
@@ -326,12 +331,72 @@ fn generate_sphere_model() -> Model {
         gl_buffer_id: vertex_id,
         gl_index_id: index_id,
         sub_meshes: vec![sub_mesh],
-        attributes: vec![position_attribute], //, normal_attribute],
+        attributes: vec![position_attribute, normal_attribute],
         vertex_buffer: vertex_buffer,
         index_buffer: index_buffer,
     };
 
     Model { meshes: vec![mesh] }
+}
+
+fn render_model(
+    model: &Model,
+    projection: math::Mat4,
+    view: math::Mat4,
+    pipeline: &render::shader::Pipeline,
+) {
+    for mesh in &model.meshes {
+        let model_matrix = math::Mat4::identity();
+        unsafe {
+            glBindBuffer(GL_ARRAY_BUFFER, mesh.gl_buffer_id);
+
+            for attribute in &mesh.attributes {
+                let format: &Format = &attribute.format;
+                glVertexAttribPointer(
+                    attribute.slot as u32,
+                    format.get_dimension_size() as i32,
+                    GL_FLOAT,
+                    0,
+                    format.get_stride() as i32,
+                    attribute.get_total_offset() as *const _,
+                );
+                glEnableVertexAttribArray(attribute.slot as u32);
+            }
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.gl_index_id);
+        }
+        for sub_mesh in &mesh.sub_meshes {
+            unsafe {
+                glUseProgram(pipeline.id);
+
+                glUniformMatrix4fv(
+                    glGetUniformLocation(pipeline.id, "model\0".as_ptr()),
+                    1,
+                    0,
+                    model_matrix.as_ptr(),
+                );
+                glUniformMatrix4fv(
+                    glGetUniformLocation(pipeline.id, "projection\0".as_ptr()),
+                    1,
+                    0,
+                    projection.as_ptr(),
+                );
+                glUniformMatrix4fv(
+                    glGetUniformLocation(pipeline.id, "view\0".as_ptr()),
+                    1,
+                    0,
+                    view.as_ptr(),
+                );
+                let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
+
+                glDrawElements(
+                    GL_TRIANGLES,
+                    sub_mesh.num_indices as i32,
+                    GL_UNSIGNED_INT,
+                    start_index as *const _,
+                );
+            }
+        }
+    }
 }
 
 fn main() {
@@ -377,14 +442,12 @@ fn main() {
                 ..
             } => *control_flow = ControlFlow::Exit,
             Event::MainEventsCleared => {
-                // Application update code.
-
                 unsafe {
-                    // glEnable(GL_BLEND);
-                    // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-                    // glEnable(GL_DEPTH_TEST);
-                    // glEnable(GL_PROGRAM_POINT_SIZE);
-                    // glEnable(GL_LINE_SMOOTH);
+                    glEnable(GL_BLEND);
+                    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                    glEnable(GL_DEPTH_TEST);
+                    glEnable(GL_PROGRAM_POINT_SIZE);
+                    glEnable(GL_LINE_SMOOTH);
                     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
                     glClearColor(0.0, 0.0, 1.0, 1.0);
                 }
@@ -396,7 +459,7 @@ fn main() {
                 let &window = &context.window();
 
                 let inner_size = window.inner_size();
-                let angle: f32 = 50.0;
+                let angle: f32 = 90.0;
                 let projection = math::shared::perspective(
                     angle.to_radians(),
                     (inner_size.width as f32 / inner_size.height as f32) as f32,
@@ -407,67 +470,8 @@ fn main() {
                 unsafe {
                     glViewport(0, 0, inner_size.width as i32, inner_size.height as i32);
                 }
-                for mesh in &sphere_model.meshes {
-                    let model_matrix = math::Mat4::identity();
-                    unsafe {
-                        glBindBuffer(GL_ARRAY_BUFFER, mesh.gl_buffer_id);
-
-                        for attribute in &mesh.attributes {
-                            //println!("{}", attribute.slot as u32);
-
-                            let format: &Format = &attribute.format;
-
-                            glVertexAttribPointer(
-                                attribute.slot as u32,
-                                format.get_dimension_size() as i32,
-                                GL_FLOAT,
-                                0,
-                                format.get_stride() as i32,
-                                attribute.get_total_offset() as *const _,
-                            );
-
-                            glEnableVertexAttribArray(attribute.slot as u32);
-                        }
-
-                        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.gl_index_id);
-                    }
-                    for sub_mesh in &mesh.sub_meshes {
-                        unsafe {
-                            glUseProgram(pipeline.id);
-
-                            glUniformMatrix4fv(
-                                glGetUniformLocation(pipeline.id, "model\0".as_ptr()),
-                                1,
-                                0,
-                                model_matrix.as_ptr(),
-                            );
-                            glUniformMatrix4fv(
-                                glGetUniformLocation(pipeline.id, "projection\0".as_ptr()),
-                                1,
-                                0,
-                                projection.as_ptr(),
-                            );
-                            glUniformMatrix4fv(
-                                glGetUniformLocation(pipeline.id, "view\0".as_ptr()),
-                                1,
-                                0,
-                                view.as_ptr(),
-                            );
-                            let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
-
-                            glDrawElements(
-                                GL_TRIANGLES,
-                                sub_mesh.num_indices as i32,
-                                GL_UNSIGNED_INT,
-                                start_index as *const _,
-                            );
-                        }
-                    }
-                }
+                render_model(&sphere_model, projection, view, &pipeline);
                 let _ = context.swap_buffers();
-            }
-            Event::RedrawRequested(_) => {
-                // Redraw the application.
             }
             _ => (),
         }
