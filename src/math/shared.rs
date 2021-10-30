@@ -7,9 +7,10 @@
 // https://mit-license.org/
 
 use crate::math::mat4::Mat4;
-use crate::math::ops::{Cross, Dot, Normalize};
+use crate::math::ops::{Cross, Dot, Inverse, Normalize};
 use crate::math::point3::Point3;
 use crate::math::vec3::Vec3;
+use crate::math::vec4::Vec4;
 
 pub const UNIT_X: Vec3 = Vec3 {
     x: 1.0,
@@ -60,9 +61,7 @@ pub fn perspective(fov: f32, aspect: f32, near: f32, far: f32) -> Mat4 {
     result
 }
 
-// @TODO make the eye and target a point type
 pub fn look_at(eye: &Point3, target: &Point3, target_up: &Vec3) -> Mat4 {
-    // need to be normalized
     let forward = (target - eye).normalize();
     let right = Vec3::cross(&forward, &target_up).normalize();
     let up = Vec3::cross(&right, &forward);

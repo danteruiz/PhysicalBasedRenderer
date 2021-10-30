@@ -433,6 +433,9 @@ fn main() {
 
     // create gl buffers for model
 
+    let eye_position = math::Point3::new(1.0, -7.0, 4.0);
+    let target_position = math::Point3::new(0.0, 0.0, 0.0);
+    let view = math::shared::look_at(&eye_position, &target_position, &math::shared::UNIT_Y);
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
 
@@ -451,11 +454,6 @@ fn main() {
                     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
                     glClearColor(0.0, 0.0, 1.0, 1.0);
                 }
-                let eye_position = math::Point3::new(0.0, 0.0, -4.0);
-                let target_position = math::Point3::new(0.0, 0.0, 0.0);
-                let view =
-                    math::shared::look_at(&eye_position, &target_position, &math::shared::UNIT_Y);
-
                 let &window = &context.window();
 
                 let inner_size = window.inner_size();

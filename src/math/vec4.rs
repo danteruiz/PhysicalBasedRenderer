@@ -9,7 +9,7 @@
 use std::cmp::PartialEq;
 use std::convert::From;
 use std::fmt;
-use std::ops::{Add, Index, IndexMut, Mul, Sub};
+use std::ops::{Add, Div, Index, IndexMut, Mul, Sub};
 
 use crate::math::point3::Point3;
 use crate::math::vec3::Vec3;
@@ -67,6 +67,17 @@ impl From<Point3> for Vec4 {
     }
 }
 
+impl From<&Point3> for Vec4 {
+    fn from(p: &Point3) -> Vec4 {
+        Vec4 {
+            x: p.x,
+            y: p.y,
+            z: p.z,
+            w: 1.0,
+        }
+    }
+}
+
 impl Add for Vec4 {
     type Output = Self;
     fn add(self, other: Self) -> Self {
@@ -87,6 +98,18 @@ impl Sub for Vec4 {
             y: self.y - other.y,
             z: self.z - other.z,
             w: self.w - other.w,
+        }
+    }
+}
+
+impl Div<f32> for Vec4 {
+    type Output = Self;
+    fn div(self, scalar: f32) -> Vec4 {
+        Vec4 {
+            x: self.x / scalar,
+            y: self.y / scalar,
+            z: self.z / scalar,
+            w: self.w / scalar,
         }
     }
 }
@@ -160,7 +183,11 @@ impl IndexMut<usize> for Vec4 {
 
 impl fmt::Display for Vec4 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "({}, {}, {}, {})", self.x, self.y, self.z, self.w)
+        write!(
+            f,
+            "({:.6}, {:.6}, {:.6}, {:.6})",
+            self.x, self.y, self.z, self.w
+        )
     }
 }
 

@@ -19,3 +19,15 @@ pub trait Cross<Rhs = Self> {
 pub trait Normalize {
     fn normalize(&self) -> Self;
 }
+
+pub trait Transpose {
+    fn transpose(&self) -> Self;
+}
+
+pub trait Inverse {
+    fn inverse(&self) -> Self;
+}
+
+pub trait Determinant {
+    fn determinant(&self) -> f32;
+}
