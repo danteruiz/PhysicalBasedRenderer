@@ -12,41 +12,41 @@ use crate::math::point3::Point3;
 use crate::math::vec3::Vec3;
 use crate::math::vec4::Vec4;
 
-pub const UNIT_X: Vec3 = Vec3 {
-    x: 1.0,
-    y: 0.0,
-    z: 0.0,
-};
-
+// pub const UNIT_X: Vec3 = Vec3 {
+//     x: 1.0,
+//     y: 0.0,
+//     z: 0.0,
+// };
+//
 pub const UNIT_Y: Vec3 = Vec3 {
     x: 0.0,
     y: 1.0,
     z: 0.0,
 };
-
-pub const UNIT_Z: Vec3 = Vec3 {
-    x: 0.0,
-    y: 0.0,
-    z: 1.0,
-};
-
-pub const UNIT_X_NEG: Vec3 = Vec3 {
-    x: -1.0,
-    y: 0.0,
-    z: 0.0,
-};
-
-pub const UNIT_Y_NEG: Vec3 = Vec3 {
-    x: 0.0,
-    y: -1.0,
-    z: 0.0,
-};
-
-pub const UNIT_Z_NEG: Vec3 = Vec3 {
-    x: 0.0,
-    y: 0.0,
-    z: -1.0,
-};
+//
+// pub const UNIT_Z: Vec3 = Vec3 {
+//     x: 0.0,
+//     y: 0.0,
+//     z: 1.0,
+// };
+//
+// pub const UNIT_X_NEG: Vec3 = Vec3 {
+//     x: -1.0,
+//     y: 0.0,
+//     z: 0.0,
+// };
+//
+// pub const UNIT_Y_NEG: Vec3 = Vec3 {
+//     x: 0.0,
+//     y: -1.0,
+//     z: 0.0,
+// };
+//
+// pub const UNIT_Z_NEG: Vec3 = Vec3 {
+//     x: 0.0,
+//     y: 0.0,
+//     z: -1.0,
+// };
 
 pub fn perspective(fov: f32, aspect: f32, near: f32, far: f32) -> Mat4 {
     let mut result = Mat4::zero();

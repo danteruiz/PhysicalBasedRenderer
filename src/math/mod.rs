@@ -17,4 +17,7 @@ pub use mat4::Mat4;
 mod ops;
 mod point3;
 pub use point3::Point3;
+
+mod quat;
+pub use quat::Quat;
 pub mod shared;
