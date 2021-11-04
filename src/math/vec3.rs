@@ -10,6 +10,7 @@ use crate::math::ops::{Cross, Dot, Normalize};
 use crate::math::point3::Point3;
 
 use std::cmp::PartialEq;
+use std::fmt;
 use std::ops::{Add, Div, Index, IndexMut, Mul, Sub};
 
 // Vec3
@@ -25,8 +26,32 @@ impl Vec3 {
         Vec3 { x: x, y: y, z: z }
     }
 
-    pub fn inverse(self) -> Vec3 {
+    pub fn inverse(&self) -> Vec3 {
         self.clone() * -1.0
+    }
+
+    pub fn cos(&self) -> Vec3 {
+        Vec3 {
+            x: self.x.cos(),
+            y: self.y.cos(),
+            z: self.z.cos(),
+        }
+    }
+
+    pub fn sin(&self) -> Vec3 {
+        Vec3 {
+            x: self.x.sin(),
+            y: self.y.sin(),
+            z: self.z.sin(),
+        }
+    }
+
+    pub fn to_radians(&self) -> Vec3 {
+        Vec3 {
+            x: self.x.to_radians(),
+            y: self.y.to_radians(),
+            z: self.z.to_radians(),
+        }
     }
 }
 
@@ -80,6 +105,13 @@ impl Mul for Vec3 {
             y: self.y * v.y,
             z: self.z * v.z,
         }
+    }
+}
+
+impl Mul<Vec3> for f32 {
+    type Output = Vec3;
+    fn mul(self, v: Vec3) -> Vec3 {
+        v * self
     }
 }
 
@@ -146,6 +178,12 @@ impl IndexMut<usize> for Vec3 {
             2 => &mut self.z,
             _ => panic!("Vec3 index out of bound: {}", index),
         }
+    }
+}
+
+impl fmt::Display for Vec3 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({:.6}, {:.6}, {:.6}", self.x, self.y, self.z,)
     }
 }
 

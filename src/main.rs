@@ -432,13 +432,12 @@ fn main() {
     let pipeline = render::shader::Pipeline::new(vertex_shader_file, fragment_shader_file).unwrap();
 
     // create gl buffers for model
-
-    let eye_position = math::Point3::new(1.0, -7.0, 4.0);
+    let eye_position = math::Point3::new(0.0, 0.0, -4.0);
+    //let camera_orientation = math::Quat::identity();
     let target_position = math::Point3::new(0.0, 0.0, 0.0);
     let view = math::shared::look_at(&eye_position, &target_position, &math::shared::UNIT_Y);
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
-
         match event {
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
