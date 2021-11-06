@@ -6,7 +6,9 @@
 // Distributed under the MIT Lisense
 // https://mit-license.org/
 
+extern crate egui;
 extern crate gl33;
+extern crate gl46;
 extern crate glfw;
 extern crate gltf;
 extern crate glutin;
@@ -15,6 +17,7 @@ extern crate winit;
 mod math;
 mod render;
 
+//use gl46::{gl_command_types::*, gl_core_types::*, gl_enumerations::*, GlFns::*};
 use gl33::{gl_enumerations::*, global_loader::*};
 use glutin::{
     event::{Event, WindowEvent},
@@ -61,6 +64,21 @@ enum Dimension {
     Vec3,
     Vec4,
     Num,
+}
+
+struct Material {
+    color: math::Vec3,
+    roughness: f32,
+    specular: f32,
+    metallic: f32,
+    ao: f32,
+}
+
+struct Light {
+    intensity: f32,
+    ambient: f32,
+    position: math::Vec3,
+    color: math::Vec3,
 }
 
 #[derive(Copy, Debug, Clone)]
@@ -134,80 +152,6 @@ struct Model {
     meshes: Vec<Mesh>,
 }
 
-// fn get_buffer_data(
-//     semantic: gltf::mesh::Semantic,
-//     primitive: &gltf::Primitive,
-//     buffers: &Vec<gltf::buffer::Data>,
-// ) -> Vec<u8> {
-//     let accessor = primitive
-//         .get(&semantic)
-//         .expect(format!("no eccessor for type {:?}", semantic).as_str());
-//
-//     let buffer_view = accessor
-//         .view()
-//         .expect(format!("Failed to get buffer for accessor {:?}", semantic).as_str());
-//
-//     let buffer = buffer_view.buffer();
-//
-//     let buffer_data = buffers
-//         .get(buffer.index())
-//         .expect(format!("Failed to get buffer_data for accessor {:?}", semantic).as_str());
-//
-//     let start = buffer_view.offset();
-//     let end = start + buffer_view.length();
-//     let buffer_data_slice = &buffer_data[start..end];
-//
-//     return Vec::from(buffer_data_slice);
-// }
-
-// let (gltf, buffers, _) =
-//     gltf::import("resources/glTF-models/DamagedHelmet.glb").expect("Failed to load file");
-//
-// let model: Model = Model { meshes: Vec::new() };
-// for mesh in gltf.meshes() {
-//     let mut positions: Vec<u8> = Vec::new();
-//     let mut normals: Vec<u8> = Vec::new();
-//     let mut tex_coords: Vec<u8> = Vec::new();
-//
-//     let indices: Vec<u32> = Vec::new();
-//
-//     for primitive in mesh.primitives() {
-//         positions.append(&mut get_buffer_data(
-//             gltf::mesh::Semantic::Positions,
-//             &primitive,
-//             &buffers,
-//         ));
-//         normals.append(&mut get_buffer_data(
-//             gltf::mesh::Semantic::Normals,
-//             &primitive,
-//             &buffers,
-//         ));
-//         tex_coords.append(&mut get_buffer_data(
-//             gltf::mesh::Semantic::TexCoords(0),
-//             &primitive,
-//             &buffers,
-//         ));
-//
-//         // get indcies
-//
-//         let indices_accessor = primitive.indices().expect("expecting a buffer");
-//
-//         println!(
-//             "component size: {}, dimensions: {:?}, count: {}, DataType: {:?}",
-//             indices_accessor.size(),
-//             indices_accessor.dimensions(),
-//             indices_accessor.count(),
-//             indices_accessor.data_type()
-//         );
-//
-//         //	    let index_buffer_view = indices_accessor =
-//     }
-// }
-
-// println!("after loading the data");
-// glfw::init_hint(glfw::InitHint::JoystickHatButtons(false));
-// let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
-
 fn to_byte_slice<'a, T>(floats: &'a [T]) -> &'a [u8] {
     unsafe {
         std::slice::from_raw_parts(
@@ -273,8 +217,6 @@ fn generate_sphere_model() -> Model {
         material_index: 0,
     };
 
-    //let buffer: Vec<u8> = Vec::new();
-
     let position_attribute: Attribute = Attribute {
         format: Format {
             dimension: Dimension::Vec3,
@@ -339,12 +281,31 @@ fn generate_sphere_model() -> Model {
     Model { meshes: vec![mesh] }
 }
 
+const EYE_POSITION: math::Point3 = math::Point3 {
+    x: 0.0,
+    y: 0.0,
+    z: -4.0,
+};
 fn render_model(
     model: &Model,
     projection: math::Mat4,
     view: math::Mat4,
     pipeline: &render::shader::Pipeline,
 ) {
+    let light = Light {
+        intensity: 5.0,
+        ambient: 1.0,
+        position: math::Vec3::new(0.0, 10.0, -2.0),
+        color: math::Vec3::new(1.0, 1.0, 0.0),
+    };
+
+    let material = Material {
+        color: math::Vec3::new(1.0, 1.0, 1.0),
+        roughness: 1.0,
+        specular: 0.3,
+        metallic: 0.5,
+        ao: 1.0,
+    };
     for mesh in &model.meshes {
         let model_matrix = math::Mat4::identity();
         unsafe {
@@ -368,26 +329,22 @@ fn render_model(
             unsafe {
                 glUseProgram(pipeline.id);
 
-                glUniformMatrix4fv(
-                    glGetUniformLocation(pipeline.id, "model\0".as_ptr()),
-                    1,
-                    0,
-                    model_matrix.as_ptr(),
-                );
-                glUniformMatrix4fv(
-                    glGetUniformLocation(pipeline.id, "projection\0".as_ptr()),
-                    1,
-                    0,
-                    projection.as_ptr(),
-                );
-                glUniformMatrix4fv(
-                    glGetUniformLocation(pipeline.id, "view\0".as_ptr()),
-                    1,
-                    0,
-                    view.as_ptr(),
-                );
-                let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
+                pipeline.set_uniform_mat4("model\0", &model_matrix);
+                pipeline.set_uniform_mat4("projection\0", &projection);
+                pipeline.set_uniform_mat4("view\0", &view);
 
+                // pipeline.set_uniform_1f("light_intensity\0", light.intensity);
+                // pipeline.set_uniform_1f("light_ambient\0", light.ambient);
+                // pipeline.set_uniform_vec3("light_color\0", &light.color);
+                // pipeline.set_uniform_vec3("light_position\0", &light.position);
+                pipeline.set_uniform_vec3("material_colo\0", &material.color);
+                // pipeline.set_uniform_1f("material_roughness\0", material.roughness);
+                // pipeline.set_uniform_1f("material_metallic\0", material.metallic);
+                pipeline.set_uniform_1f("material_ao\0", material.ao);
+                // pipeline.set_uniform_1f("material_specular\0", material.roughness);
+                // pipeline.set_uniform_point3("cameraPosition\0", &eye_position);
+
+                let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
                 glDrawElements(
                     GL_TRIANGLES,
                     sub_mesh.num_indices as i32,
@@ -400,6 +357,8 @@ fn render_model(
 }
 
 fn main() {
+    let egui_context = egui::CtxRef::default();
+
     let event_loop = EventLoop::new();
     let window_builder = WindowBuilder::new().with_title(WINDOW_TITLE);
 
@@ -426,16 +385,15 @@ fn main() {
 
     let sphere_model: Model = generate_sphere_model();
 
-    let fragment_shader_file: &'static str = "resources/shaders/phong.fs";
-    let vertex_shader_file: &'static str = "resources/shaders/debug.vs";
+    let fragment_shader_file: &'static str = "resources/shaders/pbr.fs";
+    let vertex_shader_file: &'static str = "resources/shaders/pbr.vs";
 
     let pipeline = render::shader::Pipeline::new(vertex_shader_file, fragment_shader_file).unwrap();
-
     // create gl buffers for model
-    let eye_position = math::Point3::new(0.0, 0.0, -4.0);
+    //let eye_position = math::Point3::new(0.0, 0.0, -4.0);
     //let camera_orientation = math::Quat::identity();
     let target_position = math::Point3::new(0.0, 0.0, 0.0);
-    let view = math::shared::look_at(&eye_position, &target_position, &math::shared::UNIT_Y);
+    let view = math::shared::look_at(&EYE_POSITION, &target_position, &math::shared::UNIT_Y);
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
         match event {
@@ -444,6 +402,7 @@ fn main() {
                 ..
             } => *control_flow = ControlFlow::Exit,
             Event::MainEventsCleared => {
+                //let raw_input: egui::RawInput = gather_input();
                 unsafe {
                     glEnable(GL_BLEND);
                     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -451,7 +410,7 @@ fn main() {
                     glEnable(GL_PROGRAM_POINT_SIZE);
                     glEnable(GL_LINE_SMOOTH);
                     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-                    glClearColor(0.0, 0.0, 1.0, 1.0);
+                    glClearColor(0.0, 0.0, 0.0, 1.0);
                 }
                 let &window = &context.window();
 

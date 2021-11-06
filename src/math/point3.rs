@@ -26,6 +26,10 @@ impl Point3 {
     pub fn inverse(point: Point3) -> Point3 {
         point.clone() * -1.0
     }
+
+    pub fn as_ptr(self) -> *const f32 {
+        &self.x
+    }
 }
 
 impl Mul<f32> for Point3 {

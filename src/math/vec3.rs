@@ -10,6 +10,7 @@ use crate::math::ops::{Cross, Dot, Normalize};
 use crate::math::point3::Point3;
 
 use std::cmp::PartialEq;
+use std::convert::From;
 use std::fmt;
 use std::ops::{Add, Div, Index, IndexMut, Mul, Sub};
 
@@ -52,6 +53,10 @@ impl Vec3 {
             y: self.y.to_radians(),
             z: self.z.to_radians(),
         }
+    }
+
+    pub fn as_ptr(self) -> *const f32 {
+        &self.x
     }
 }
 

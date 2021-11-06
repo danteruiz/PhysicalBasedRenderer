@@ -9,13 +9,47 @@ use gl33::{gl_core_types::*, gl_enumerations::*, global_loader::*};
 use std::ffi::CString;
 use std::fs;
 
-//pub struct Shader {}
+use crate::math;
 static SHADER_BASE_PATH: &'static str = "resources/shaders/";
 
 pub struct Pipeline {
     pub id: u32,
 }
 
+impl Pipeline {
+    pub fn set_uniform_mat4(&self, name: &str, matrix: &math::Mat4) {
+        unsafe {
+            glUniformMatrix4fv(
+                glGetUniformLocation(self.id, name.as_ptr()),
+                1,
+                0,
+                matrix.as_ptr(),
+            );
+        }
+    }
+
+    pub fn set_uniform_vec3(&self, name: &str, vec: &math::Vec3) {
+        unsafe {
+            glUniform3fv(
+                glGetUniformLocation(self.id, name.as_ptr()),
+                1,
+                vec.as_ptr(),
+            );
+        }
+    }
+
+    pub fn set_uniform_point3(&self, name: &str, p: &math::Point3) {
+        unsafe {
+            glUniform3fv(glGetUniformLocation(self.id, name.as_ptr()), 1, p.as_ptr());
+        }
+    }
+
+    pub fn set_uniform_1f(&self, name: &str, f: f32) {
+        unsafe {
+            glUniform1f(glGetUniformLocation(self.id, name.as_ptr()), f);
+        }
+    }
+}
 fn parse_shader_file(shader_file: &str) -> String {
     let file = fs::read_to_string(shader_file).unwrap();
 
@@ -44,6 +78,8 @@ fn compile_shader(shader_type: GLenum, source: &String) -> Result<u32, String> {
 
     let mut compiled: i32 = 1;
     let info_log: CString;
+
+    println!("source: {}", source);
     unsafe {
         glShaderSource(
             program_object,
@@ -72,7 +108,6 @@ fn compile_shader(shader_type: GLenum, source: &String) -> Result<u32, String> {
     }
 
     if compiled == 0 {
-        println!("failed to compile: {}", info_log.to_string_lossy());
         return Err(info_log.to_string_lossy().into_owned());
     }
 
