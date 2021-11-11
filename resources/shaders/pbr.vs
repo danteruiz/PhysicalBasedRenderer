@@ -8,15 +8,12 @@ uniform mat4 model;
 uniform mat4 projection;
 uniform mat4 view;
 
-out vec3 vNormal;
-out vec3 vPosition;
-out vec2 TexCoord;
-out vec3 vViewPosition;
+out vec3 vertex_normal;
+out vec3 vertex_position;
+
 void main() {
-    mat3 modelMatrix = mat3(model);
-    vPosition = modelMatrix * aPos;
-    vNormal = normalize(modelMatrix * aNormal);
-    TexCoord = vec2(0.0, 0.0);
-    vViewPosition = mat3(view) * aPos;
+    mat3 model_mat3 = mat3(model);
+    vertex_position = vec3(model * vec4(aPos, 1.0));
+    vertex_normal = normalize(model_mat3 * aNormal);
     gl_Position = projection * view * model * vec4(aPos, 1.0f);
 }

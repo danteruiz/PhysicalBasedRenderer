@@ -55,7 +55,7 @@ impl Vec3 {
         }
     }
 
-    pub fn as_ptr(self) -> *const f32 {
+    pub fn as_ptr(&self) -> *const f32 {
         &self.x
     }
 }

@@ -25,11 +25,6 @@ use glutin::{
     window::WindowBuilder,
 };
 
-// use winit::event::{ElementState, Event, KeyboradInput, VirtualKeyCode, WindowEvent};
-// use winit::event_loop::{ControlFlow, EventLoop};
-//
-// use ash::version::EntryV1_0;
-// use ash::version::Instancev1_0;
 // use std::fmt;
 // use std::mem;
 
@@ -122,12 +117,6 @@ impl Attribute {
         return self.offset * self.format.get_type_size();
     }
 }
-
-// struct BufferView {
-//     offset: usize,
-//     size: usize,
-//     format: Format,
-// }
 
 struct Buffer {
     data: Vec<u8>,
@@ -284,7 +273,34 @@ fn generate_sphere_model() -> Model {
 const EYE_POSITION: math::Point3 = math::Point3 {
     x: 0.0,
     y: 0.0,
-    z: -4.0,
+    z: -2.0,
+};
+
+const light: Light = Light {
+    intensity: 0.4,
+    ambient: 1.0,
+    position: math::Vec3 {
+        x: 0.0,
+        y: 4.0,
+        z: 10.0,
+    },
+    color: math::Vec3 {
+        x: 1.0,
+        y: 1.0,
+        z: 1.0,
+    },
+};
+
+const material: Material = Material {
+    color: math::Vec3 {
+        x: 0.0,
+        y: 1.0,
+        z: 0.0,
+    },
+    roughness: 1.0,
+    specular: 0.3,
+    metallic: 0.5,
+    ao: 1.0,
 };
 fn render_model(
     model: &Model,
@@ -292,20 +308,6 @@ fn render_model(
     view: math::Mat4,
     pipeline: &render::shader::Pipeline,
 ) {
-    let light = Light {
-        intensity: 5.0,
-        ambient: 1.0,
-        position: math::Vec3::new(0.0, 10.0, -2.0),
-        color: math::Vec3::new(1.0, 1.0, 0.0),
-    };
-
-    let material = Material {
-        color: math::Vec3::new(1.0, 1.0, 1.0),
-        roughness: 1.0,
-        specular: 0.3,
-        metallic: 0.5,
-        ao: 1.0,
-    };
     for mesh in &model.meshes {
         let model_matrix = math::Mat4::identity();
         unsafe {
@@ -325,24 +327,26 @@ fn render_model(
             }
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.gl_index_id);
         }
+
         for sub_mesh in &mesh.sub_meshes {
             unsafe {
                 glUseProgram(pipeline.id);
 
+                let camera_position = EYE_POSITION * -1.0;
                 pipeline.set_uniform_mat4("model\0", &model_matrix);
                 pipeline.set_uniform_mat4("projection\0", &projection);
                 pipeline.set_uniform_mat4("view\0", &view);
 
-                // pipeline.set_uniform_1f("light_intensity\0", light.intensity);
-                // pipeline.set_uniform_1f("light_ambient\0", light.ambient);
-                // pipeline.set_uniform_vec3("light_color\0", &light.color);
-                // pipeline.set_uniform_vec3("light_position\0", &light.position);
-                pipeline.set_uniform_vec3("material_colo\0", &material.color);
-                // pipeline.set_uniform_1f("material_roughness\0", material.roughness);
-                // pipeline.set_uniform_1f("material_metallic\0", material.metallic);
-                pipeline.set_uniform_1f("material_ao\0", material.ao);
-                // pipeline.set_uniform_1f("material_specular\0", material.roughness);
-                // pipeline.set_uniform_point3("cameraPosition\0", &eye_position);
+                pipeline.set_uniform_1f("light.intensity\0", light.intensity);
+                pipeline.set_uniform_1f("light.ambient\0", light.ambient);
+                pipeline.set_uniform_vec3("light.color\0", &light.color);
+                pipeline.set_uniform_vec3("light.position\0", &light.position);
+                pipeline.set_uniform_vec3("material.color\0", &material.color);
+                pipeline.set_uniform_1f("material.roughness\0", material.roughness);
+                pipeline.set_uniform_1f("material.metallic\0", material.metallic);
+                pipeline.set_uniform_1f("material.ao\0", material.ao);
+                pipeline.set_uniform_1f("material.specular\0", material.roughness);
+                pipeline.set_uniform_point3("camera_position\0", &camera_position);
 
                 let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
                 glDrawElements(
@@ -388,7 +392,8 @@ fn main() {
     let fragment_shader_file: &'static str = "resources/shaders/pbr.fs";
     let vertex_shader_file: &'static str = "resources/shaders/pbr.vs";
 
-    let pipeline = render::shader::Pipeline::new(vertex_shader_file, fragment_shader_file).unwrap();
+    let mut pipeline =
+        render::shader::Pipeline::new(vertex_shader_file, fragment_shader_file).unwrap();
     // create gl buffers for model
     //let eye_position = math::Point3::new(0.0, 0.0, -4.0);
     //let camera_orientation = math::Quat::identity();
@@ -396,6 +401,20 @@ fn main() {
     let view = math::shared::look_at(&EYE_POSITION, &target_position, &math::shared::UNIT_Y);
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
+
+        let new_pipeline = render::shader::Pipeline::new(vertex_shader_file, fragment_shader_file);
+
+        match new_pipeline {
+            Ok(p) => {
+                unsafe {
+                    glDeleteShader(pipeline.id);
+                }
+                pipeline = p;
+            }
+            Err(error) => {
+                println!("error: {}", error);
+            }
+        };
         match event {
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,

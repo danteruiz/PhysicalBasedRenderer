@@ -79,7 +79,6 @@ fn compile_shader(shader_type: GLenum, source: &String) -> Result<u32, String> {
     let mut compiled: i32 = 1;
     let info_log: CString;
 
-    println!("source: {}", source);
     unsafe {
         glShaderSource(
             program_object,
@@ -141,10 +140,10 @@ impl Pipeline {
         fragment_shader: &'static str,
     ) -> Result<Pipeline, String> {
         let vs_source: String = parse_shader_file(vertex_shader);
-        let vs_shader = compile_shader(GL_VERTEX_SHADER, &vs_source).unwrap();
+        let vs_shader = compile_shader(GL_VERTEX_SHADER, &vs_source)?;
 
         let fs_source: String = parse_shader_file(fragment_shader);
-        let fs_shader = compile_shader(GL_FRAGMENT_SHADER, &fs_source).unwrap();
+        let fs_shader = compile_shader(GL_FRAGMENT_SHADER, &fs_source)?;
 
         let program_result = build_program(vec![vs_shader, fs_shader]);
 

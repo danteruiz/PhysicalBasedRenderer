@@ -27,7 +27,7 @@ impl Point3 {
         point.clone() * -1.0
     }
 
-    pub fn as_ptr(self) -> *const f32 {
+    pub fn as_ptr(&self) -> *const f32 {
         &self.x
     }
 }
