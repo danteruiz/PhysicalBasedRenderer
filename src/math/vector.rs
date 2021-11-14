@@ -26,8 +26,6 @@ impl<T, const N: usize> Point<T, N> {
     }
 }
 
-struct Vector<f32, const 3: usize> {
-}
 // type Vec2 = Vector<f32, 2>;
 //
 // type Point2 = Point<f32, 2>;

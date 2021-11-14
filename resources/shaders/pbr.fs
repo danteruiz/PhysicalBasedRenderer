@@ -1,5 +1,7 @@
 #version 330 core
 
+#include SharedPBR.glsl
+
 struct Light {
     vec3 position;
     vec3 color;
@@ -9,7 +11,7 @@ struct Light {
 struct Material {
     vec3 color;
     float roughness;
-    float specular;
+    float metallic;
     float ao;
 };
 
@@ -23,13 +25,33 @@ in vec3 vertex_position;;
 
 out vec4 FragColor;
 void main() {
-    vec3 light_direction = normalize(light.position - vertex_position);
-    vec3 view_direction = normalize(camera_position - vertex_position);
-    vec3 half_vector = normalize(view_direction + light_direction);
+    vec3 L = normalize(light.position - vertex_position);
+    vec3 V = normalize(camera_position - vertex_position);
+    vec3 H = normalize(V + L);
+    vec3 N = vertex_normal;
 
-    float n_dot_l = clamp(dot(vertex_normal, light_direction), 0.01, 1.0);
-    float n_dot_h = clamp(dot(vertex_normal, half_vector), 0.0,  1.0);
-    vec3 lo = (material.color + light.color * pow(n_dot_h, 32)) * n_dot_l;
-    lo += vec3(0.1, 0.1, 0.1);
+    float NdotL = clamp(dot(N, L), 0.01, 1.0);
+    float NdotH = clamp(dot(N, H), 0.01, 1.0);
+    float NdotV = abs(dot(N, V));
+    float LdotH = clamp(dot(L, H), 0.0, 1.0);
+    float VdotH = clamp(dot(V, H), 0.0, 1.0);
+
+    float distance = length(light.position - vertex_position);
+    float attenuation = 1 / (distance * distance);
+
+    vec3 radiance = (light.color * vec3(300.0)) * attenuation;
+    vec3 f0 = mix(vec3(0.04), material.color, material.roughness);
+    vec3 albedo = material.color * (vec3(1.0) - vec3(0.04));
+    albedo *= 1.0 - material.metallic;
+
+    float D = NDF(NdotH, material.roughness);
+    float G = G_SchlicksmithGGX(NdotL, NdotV, material.roughness);
+    vec3  F = F_Schlick2(VdotH, f0);
+
+    vec3 Fd = (1.0 - F) * (albedo / PI);
+    vec3 Fr = (D * G * F) / (4.0 * NdotL * NdotV);
+
+    vec3 lo = (Fr + Fd) * radiance * NdotL;
+    lo += material.color * vec3(0.02);
     FragColor = vec4(lo, material.ao);
 }

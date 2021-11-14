@@ -8,11 +8,8 @@
 
 extern crate egui;
 extern crate gl33;
-extern crate gl46;
-extern crate glfw;
 extern crate gltf;
 extern crate glutin;
-extern crate winit;
 
 mod math;
 mod render;
@@ -24,17 +21,6 @@ use glutin::{
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
-
-// use std::fmt;
-// use std::mem;
-
-// #[repr(u8)]
-// enum Topology {
-//     Points,
-//     Lines,
-//     LineStrip,
-//     Triangles,
-// }
 
 #[allow(dead_code)]
 #[repr(u8)]
@@ -152,8 +138,8 @@ fn to_byte_slice<'a, T>(floats: &'a [T]) -> &'a [u8] {
 const WINDOW_TITLE: &'static str = "Physical Based Renderer";
 
 static PI: f32 = 3.14159265359;
-static X_SEGMENTS: f32 = 32.0;
-static Y_SEGMENTS: f32 = 32.0;
+static X_SEGMENTS: f32 = 512.0;
+static Y_SEGMENTS: f32 = 512.0;
 
 fn generate_sphere_model() -> Model {
     let mut positions: Vec<f32> = Vec::new();
@@ -273,16 +259,16 @@ fn generate_sphere_model() -> Model {
 const EYE_POSITION: math::Point3 = math::Point3 {
     x: 0.0,
     y: 0.0,
-    z: -2.0,
+    z: 2.0,
 };
 
 const light: Light = Light {
     intensity: 0.4,
     ambient: 1.0,
     position: math::Vec3 {
-        x: 0.0,
-        y: 4.0,
-        z: 10.0,
+        x: 5.0,
+        y: 7.0,
+        z: 5.0,
     },
     color: math::Vec3 {
         x: 1.0,
@@ -293,13 +279,13 @@ const light: Light = Light {
 
 const material: Material = Material {
     color: math::Vec3 {
-        x: 0.0,
-        y: 1.0,
-        z: 0.0,
+        x: 1.0,
+        y: 0.2,
+        z: 0.4,
     },
     roughness: 1.0,
     specular: 0.3,
-    metallic: 0.5,
+    metallic: 1.0,
     ao: 1.0,
 };
 fn render_model(
@@ -332,7 +318,7 @@ fn render_model(
             unsafe {
                 glUseProgram(pipeline.id);
 
-                let camera_position = EYE_POSITION * -1.0;
+                let camera_position = EYE_POSITION;
                 pipeline.set_uniform_mat4("model\0", &model_matrix);
                 pipeline.set_uniform_mat4("projection\0", &projection);
                 pipeline.set_uniform_mat4("view\0", &view);
@@ -392,36 +378,30 @@ fn main() {
     let fragment_shader_file: &'static str = "resources/shaders/pbr.fs";
     let vertex_shader_file: &'static str = "resources/shaders/pbr.vs";
 
-    let mut pipeline =
-        render::shader::Pipeline::new(vertex_shader_file, fragment_shader_file).unwrap();
-    // create gl buffers for model
-    //let eye_position = math::Point3::new(0.0, 0.0, -4.0);
-    //let camera_orientation = math::Quat::identity();
+    let pipeline = render::shader::Pipeline::new(vertex_shader_file, fragment_shader_file).unwrap();
     let target_position = math::Point3::new(0.0, 0.0, 0.0);
     let view = math::shared::look_at(&EYE_POSITION, &target_position, &math::shared::UNIT_Y);
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
 
-        let new_pipeline = render::shader::Pipeline::new(vertex_shader_file, fragment_shader_file);
-
-        match new_pipeline {
-            Ok(p) => {
-                unsafe {
-                    glDeleteShader(pipeline.id);
-                }
-                pipeline = p;
-            }
-            Err(error) => {
-                println!("error: {}", error);
-            }
-        };
+        // let new_pipeline = render::shader::Pipeline::new(vertex_shader_file, fragment_shader_file);
+        //
+        // match new_pipeline {
+        //     Ok(p) => {
+        //         glDeleteShader(pipeline.id);
+        //         pipeline = p;
+        //     }
+        //     Err(error) => {
+        //         println!("error: {}", error);
+        //     }
+        // };
         match event {
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
                 ..
             } => *control_flow = ControlFlow::Exit,
             Event::MainEventsCleared => {
-                //let raw_input: egui::RawInput = gather_input();
+                // //let raw_input: egui::RawInput = gather_input();
                 unsafe {
                     glEnable(GL_BLEND);
                     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

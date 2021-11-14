@@ -263,7 +263,6 @@ impl Inverse for Mat4 {
         m[1][0] = -(self[0][1] * cofactor00 - self[2][1] * cofactor09 + self[3][1] * cofactor10);
         m[1][1] = self[0][0] * cofactor00 - self[2][0] * cofactor09 + self[3][0] * cofactor10;
         m[1][2] = -(self[0][0] * cofactor03 - self[2][0] * cofactor11 + self[3][0] * cofactor12);
-
         m[1][3] = self[0][0] * cofactor06 - self[2][0] * cofactor13 + self[3][0] * cofactor14;
 
         m[2][0] = self[0][1] * cofactor01 - self[1][1] * cofactor09 + self[3][1] * cofactor15;
@@ -278,9 +277,9 @@ impl Inverse for Mat4 {
 
         m = m.transpose();
 
-        let determinate = 1.0 / self.determinant();
-
-        m * determinate
+        let determinant = m.determinant();
+        let one_over_determinate = 1.0 / determinant;
+        m * one_over_determinate
     }
 }
 

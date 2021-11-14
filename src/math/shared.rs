@@ -68,18 +68,15 @@ pub fn look_at(eye: &Point3, target: &Point3, target_up: &Vec3) -> Mat4 {
 
     let mut result = Mat4::identity();
 
-    result[0][0] = right.x;
-    result[1][0] = right.y;
-    result[2][0] = right.z;
-    result[0][1] = up.x;
-    result[1][1] = up.y;
-    result[2][1] = up.z;
-    result[0][2] = -forward.x;
-    result[1][2] = -forward.y;
-    result[2][2] = -forward.z;
-    result[3][0] = -Vec3::dot(&right, &eye);
-    result[3][1] = -Vec3::dot(&up, &eye);
-    result[3][2] = Vec3::dot(&forward, &eye);
+    let r = Mat4::new(
+        Vec4::from(right),
+        Vec4::from(up),
+        Vec4::from(forward * -1.0),
+        Vec4::new(0.0, 0.0, 0.0, 1.0),
+    );
 
-    result
+    let mut t = Mat4::identity();
+    t[3] = Vec4::from(eye);
+    let cam_to_world_mat = r * t;
+    cam_to_world_mat.inverse()
 }
