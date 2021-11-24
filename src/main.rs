@@ -17,7 +17,7 @@ mod render;
 //use gl46::{gl_command_types::*, gl_core_types::*, gl_enumerations::*, GlFns::*};
 use gl33::{gl_enumerations::*, global_loader::*};
 use glutin::{
-    event::{Event, WindowEvent},
+    event::{ElementState, Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
@@ -50,7 +50,6 @@ enum Dimension {
 struct Material {
     color: math::Vec3,
     roughness: f32,
-    specular: f32,
     metallic: f32,
     ao: f32,
 }
@@ -111,7 +110,6 @@ struct Buffer {
 struct SubMesh {
     start_index: usize,
     num_indices: usize,
-    material_index: usize,
 }
 
 struct Mesh {
@@ -119,8 +117,6 @@ struct Mesh {
     gl_index_id: u32,
     sub_meshes: Vec<SubMesh>,
     attributes: Vec<Attribute>,
-    vertex_buffer: Buffer,
-    index_buffer: Buffer,
 }
 
 struct Model {
@@ -189,7 +185,6 @@ fn generate_sphere_model() -> Model {
     let sub_mesh: SubMesh = SubMesh {
         start_index: 0,
         num_indices: indices.len(),
-        material_index: 0,
     };
 
     let position_attribute: Attribute = Attribute {
@@ -249,8 +244,6 @@ fn generate_sphere_model() -> Model {
         gl_index_id: index_id,
         sub_meshes: vec![sub_mesh],
         attributes: vec![position_attribute, normal_attribute],
-        vertex_buffer: vertex_buffer,
-        index_buffer: index_buffer,
     };
 
     Model { meshes: vec![mesh] }
@@ -262,7 +255,7 @@ const EYE_POSITION: math::Point3 = math::Point3 {
     z: 2.0,
 };
 
-const light: Light = Light {
+const LIGHT: Light = Light {
     intensity: 0.4,
     ambient: 1.0,
     position: math::Vec3 {
@@ -277,14 +270,13 @@ const light: Light = Light {
     },
 };
 
-const material: Material = Material {
+const MATERIAL: Material = Material {
     color: math::Vec3 {
         x: 1.0,
         y: 0.2,
         z: 0.4,
     },
     roughness: 1.0,
-    specular: 0.3,
     metallic: 1.0,
     ao: 1.0,
 };
@@ -323,15 +315,15 @@ fn render_model(
                 pipeline.set_uniform_mat4("projection\0", &projection);
                 pipeline.set_uniform_mat4("view\0", &view);
 
-                pipeline.set_uniform_1f("light.intensity\0", light.intensity);
-                pipeline.set_uniform_1f("light.ambient\0", light.ambient);
-                pipeline.set_uniform_vec3("light.color\0", &light.color);
-                pipeline.set_uniform_vec3("light.position\0", &light.position);
-                pipeline.set_uniform_vec3("material.color\0", &material.color);
-                pipeline.set_uniform_1f("material.roughness\0", material.roughness);
-                pipeline.set_uniform_1f("material.metallic\0", material.metallic);
-                pipeline.set_uniform_1f("material.ao\0", material.ao);
-                pipeline.set_uniform_1f("material.specular\0", material.roughness);
+                pipeline.set_uniform_1f("light.intensity\0", LIGHT.intensity);
+                pipeline.set_uniform_1f("light.ambient\0", LIGHT.ambient);
+                pipeline.set_uniform_vec3("light.color\0", &LIGHT.color);
+                pipeline.set_uniform_vec3("light.position\0", &LIGHT.position);
+                pipeline.set_uniform_vec3("material.color\0", &MATERIAL.color);
+                pipeline.set_uniform_1f("material.roughness\0", MATERIAL.roughness);
+                pipeline.set_uniform_1f("material.metallic\0", MATERIAL.metallic);
+                pipeline.set_uniform_1f("material.ao\0", MATERIAL.ao);
+                pipeline.set_uniform_1f("material.specular\0", MATERIAL.roughness);
                 pipeline.set_uniform_point3("camera_position\0", &camera_position);
 
                 let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
@@ -347,7 +339,7 @@ fn render_model(
 }
 
 fn main() {
-    let egui_context = egui::CtxRef::default();
+    let mut egui_context = egui::CtxRef::default();
 
     let event_loop = EventLoop::new();
     let window_builder = WindowBuilder::new().with_title(WINDOW_TITLE);
@@ -381,27 +373,79 @@ fn main() {
     let pipeline = render::shader::Pipeline::new(vertex_shader_file, fragment_shader_file).unwrap();
     let target_position = math::Point3::new(0.0, 0.0, 0.0);
     let view = math::shared::look_at(&EYE_POSITION, &target_position, &math::shared::UNIT_Y);
+
+    let mut raw_input: egui::RawInput = egui::RawInput::default();
+    let mut last_mouse_pos = egui::Pos2::new(0.0 as f32, 0.0 as f32);
+    let mut last_modifier = egui::Modifiers {
+        alt: false,
+        ctrl: false,
+        shift: false,
+        mac_cmd: false,
+        command: false,
+    };
+
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
-
-        // let new_pipeline = render::shader::Pipeline::new(vertex_shader_file, fragment_shader_file);
-        //
-        // match new_pipeline {
-        //     Ok(p) => {
-        //         glDeleteShader(pipeline.id);
-        //         pipeline = p;
-        //     }
-        //     Err(error) => {
-        //         println!("error: {}", error);
-        //     }
-        // };
         match event {
-            Event::WindowEvent {
-                event: WindowEvent::CloseRequested,
-                ..
-            } => *control_flow = ControlFlow::Exit,
+            Event::WindowEvent { event, .. } => match event {
+                WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
+                WindowEvent::CursorMoved {
+                    device_id: _,
+                    position,
+                    ..
+                } => {
+                    let pos2: egui::Pos2 = egui::Pos2::new(position.x as f32, position.y as f32);
+                    last_mouse_pos = pos2.clone();
+                    raw_input.events.push(egui::Event::PointerMoved(pos2));
+                }
+                WindowEvent::ModifiersChanged(modifier_state) => {
+                    last_modifier = egui::Modifiers {
+                        alt: modifier_state.alt(),
+                        ctrl: modifier_state.ctrl(),
+                        shift: modifier_state.shift(),
+                        mac_cmd: false,
+                        command: false,
+                    }
+                }
+                WindowEvent::MouseInput {
+                    device_id: _,
+                    state,
+                    button,
+                    ..
+                } => {
+                    let button_pressed: bool = match state {
+                        ElementState::Pressed => true,
+                        ElementState::Released => false,
+                    };
+
+                    let mouse_button: egui::PointerButton = match button {
+                        glutin::event::MouseButton::Left => egui::PointerButton::Primary,
+                        glutin::event::MouseButton::Right => egui::PointerButton::Secondary,
+                        glutin::event::MouseButton::Middle => egui::PointerButton::Middle,
+                        _ => egui::PointerButton::Primary,
+                    };
+
+                    raw_input.events.push(egui::Event::PointerButton {
+                        pos: Clone::clone(&last_mouse_pos),
+                        button: mouse_button,
+                        pressed: button_pressed,
+                        modifiers: last_modifier,
+                    });
+                }
+                _ => (),
+            },
             Event::MainEventsCleared => {
-                // //let raw_input: egui::RawInput = gather_input();
+                let final_input = raw_input.clone();
+                egui_context.begin_frame(final_input);
+                egui::CentralPanel::default().show(&egui_context, |ui| {
+                    ui.label("Hello world!");
+                    if ui.button("Click me").clicked() {
+                        println!("button clicked");
+                    }
+                });
+
+                // let (output, shapes) = egui_context.end_frame();
+                // let clipped_meshes = egui_context.tessellate(shapes);
                 unsafe {
                     glEnable(GL_BLEND);
                     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

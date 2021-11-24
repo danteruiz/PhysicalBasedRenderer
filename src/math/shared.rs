@@ -7,7 +7,7 @@
 // https://mit-license.org/
 
 use crate::math::mat4::Mat4;
-use crate::math::ops::{Cross, Dot, Inverse, Normalize};
+use crate::math::ops::{Cross, Inverse, Normalize};
 use crate::math::point3::Point3;
 use crate::math::vec3::Vec3;
 use crate::math::vec4::Vec4;
@@ -65,8 +65,6 @@ pub fn look_at(eye: &Point3, target: &Point3, target_up: &Vec3) -> Mat4 {
     let forward = (target - eye).normalize();
     let right = Vec3::cross(&forward, &target_up).normalize();
     let up = Vec3::cross(&right, &forward);
-
-    let mut result = Mat4::identity();
 
     let r = Mat4::new(
         Vec4::from(right),

@@ -1,7 +1,7 @@
 use std::cmp::PartialEq;
 use std::convert::From;
 use std::fmt;
-use std::ops::{Add, Mul, Sub};
+use std::ops::Mul;
 
 use crate::math::ops::Cross;
 use crate::math::vec3::Vec3;
@@ -15,23 +15,23 @@ pub struct Quat {
 }
 
 impl Quat {
-    fn new(w: f32, x: f32, y: f32, z: f32) -> Quat {
-        Quat {
-            w: w,
-            x: x,
-            y: y,
-            z: z,
-        }
-    }
+    // fn new(w: f32, x: f32, y: f32, z: f32) -> Quat {
+    //     Quat {
+    //         w: w,
+    //         x: x,
+    //         y: y,
+    //         z: z,
+    //     }
+    // }
 
-    pub fn identity() -> Quat {
-        Quat {
-            w: 1.0,
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        }
-    }
+    // pub fn identity() -> Quat {
+    //     Quat {
+    //         w: 1.0,
+    //         x: 0.0,
+    //         y: 0.0,
+    //         z: 0.0,
+    //     }
+    // }
 }
 
 impl Mul for Quat {

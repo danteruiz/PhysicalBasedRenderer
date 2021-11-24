@@ -17,9 +17,9 @@ pub struct Mat3 {
 }
 
 impl Mat3 {
-    pub fn new(v1: Vec3, v2: Vec3, v3: Vec3) -> Mat3 {
-        Mat3 { n: [v1, v2, v3] }
-    }
+    // pub fn new(v1: Vec3, v2: Vec3, v3: Vec3) -> Mat3 {
+    //     Mat3 { n: [v1, v2, v3] }
+    // }
     pub fn identity() -> Mat3 {
         Mat3 {
             n: [
