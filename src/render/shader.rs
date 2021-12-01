@@ -49,6 +49,12 @@ impl Pipeline {
             glUniform1f(glGetUniformLocation(self.id, name.as_ptr()), f);
         }
     }
+
+    pub fn set_uniform_1i(&self, name: &str, i: i32) {
+        unsafe {
+            glUniform1i(glGetUniformLocation(self.id, name.as_ptr()), i);
+        }
+    }
 }
 fn parse_shader_file(shader_file: &str) -> String {
     let file = fs::read_to_string(shader_file).unwrap();

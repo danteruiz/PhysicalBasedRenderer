@@ -7,3 +7,4 @@
 // https://mit-license.org/
 
 pub mod shader;
+pub mod texture;

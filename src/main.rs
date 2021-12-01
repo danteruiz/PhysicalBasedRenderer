@@ -14,13 +14,17 @@ extern crate glutin;
 mod math;
 mod render;
 
+use std::ptr::null;
+
 //use gl46::{gl_command_types::*, gl_core_types::*, gl_enumerations::*, GlFns::*};
-use gl33::{gl_enumerations::*, global_loader::*};
+use gl33::{gl_enumerations::*, global_loader::*, GLenum};
 use glutin::{
     event::{ElementState, Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
+
+use crate::render::texture;
 
 #[allow(dead_code)]
 #[repr(u8)]
@@ -136,6 +140,175 @@ const WINDOW_TITLE: &'static str = "Physical Based Renderer";
 static PI: f32 = 3.14159265359;
 static X_SEGMENTS: f32 = 512.0;
 static Y_SEGMENTS: f32 = 512.0;
+
+fn generate_quad_model() -> Model {
+    let positions: [f32; 12] = [
+        -1.0, 1.0, 0.0, -1.0, -1.0, 0.0, 1.0, 1.0, 0.0, 1.0, -1.0, 0.0,
+    ];
+
+    let normals: [f32; 12] = [0.0; 12];
+    let tex_coords: [f32; 8] = [0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0];
+    let indices: [i32; 6] = [0, 1, 2, 1, 2, 3];
+
+    let sub_mesh: SubMesh = SubMesh {
+        start_index: 0,
+        num_indices: 6,
+    };
+
+    let position_attribute: Attribute = Attribute {
+        format: Format {
+            dimension: Dimension::Vec3,
+            m_type: Type::Float,
+        },
+        slot: Slot::Position,
+        offset: 0,
+    };
+
+    let normal_attribute: Attribute = Attribute {
+        format: Format {
+            dimension: Dimension::Vec3,
+            m_type: Type::Float,
+        },
+        slot: Slot::Normal,
+        offset: positions.len(),
+    };
+
+    let tex_coord_attribute: Attribute = Attribute {
+        format: Format {
+            dimension: Dimension::Vec2,
+            m_type: Type::Float,
+        },
+        slot: Slot::Normal,
+        offset: positions.len() + normals.len(),
+    };
+
+    let mut buffer_data: Vec<u8> = Vec::new();
+    buffer_data.extend_from_slice(to_byte_slice(&positions));
+    buffer_data.extend_from_slice(to_byte_slice(&normals));
+    buffer_data.extend_from_slice(to_byte_slice(&tex_coords));
+
+    let vertex_buffer: Buffer = Buffer { data: buffer_data };
+
+    let mut index_buffer_data: Vec<u8> = Vec::new();
+    index_buffer_data.extend_from_slice(to_byte_slice(&indices));
+    let index_buffer: Buffer = Buffer {
+        data: index_buffer_data,
+    };
+
+    let mut vertex_id: u32 = 0;
+    let mut index_id: u32 = 0;
+
+    unsafe {
+        glGenBuffers(1, &mut vertex_id);
+        glBindBuffer(GL_ARRAY_BUFFER, vertex_id);
+        glBufferData(
+            GL_ARRAY_BUFFER,
+            (vertex_buffer.data.len() * std::mem::size_of::<u8>()) as isize,
+            vertex_buffer.data.as_ptr().cast(),
+            GL_STATIC_DRAW,
+        );
+
+        glGenBuffers(1, &mut index_id);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_id);
+        glBufferData(
+            GL_ELEMENT_ARRAY_BUFFER,
+            (index_buffer.data.len() * std::mem::size_of::<u8>()) as isize,
+            index_buffer.data.as_ptr().cast(),
+            GL_STATIC_DRAW,
+        );
+    }
+
+    let mesh: Mesh = Mesh {
+        gl_buffer_id: vertex_id,
+        gl_index_id: index_id,
+        sub_meshes: vec![sub_mesh],
+        attributes: vec![position_attribute, normal_attribute, tex_coord_attribute],
+    };
+
+    Model { meshes: vec![mesh] }
+}
+
+fn generate_cube_model() -> Model {
+    let positions: Vec<f32> = vec![
+        // right side 0 - 3
+        1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, // top side 4 - 7
+        1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0,
+        // bottom side 8 - 11
+        1.0, -1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0,
+        // left side 12 -15
+        -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0,
+        // front 16 - 19
+        1.0, 1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0,
+        // back 20 - 23
+        1.0, 1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0,
+    ];
+
+    let indices: Vec<i32> = vec![
+        0, 1, 2, 2, 1, 3, // right side
+        4, 5, 6, 4, 6, 7, // top side
+        8, 9, 10, 8, 10, 11, // bottom
+        12, 13, 14, 13, 14, 15, // left
+        16, 17, 18, 16, 18, 19, // front
+        20, 21, 22, 20, 22, 23, // back
+    ];
+
+    let position_attribute: Attribute = Attribute {
+        format: Format {
+            dimension: Dimension::Vec3,
+            m_type: Type::Float,
+        },
+        slot: Slot::Position,
+        offset: 0,
+    };
+
+    let sub_mesh: SubMesh = SubMesh {
+        start_index: 0,
+        num_indices: indices.len(),
+    };
+
+    let mut buffer_data: Vec<u8> = Vec::new();
+    buffer_data.extend_from_slice(to_byte_slice(&positions));
+
+    let vertex_buffer: Buffer = Buffer { data: buffer_data };
+
+    let mut index_buffer_data: Vec<u8> = Vec::new();
+    index_buffer_data.extend_from_slice(to_byte_slice(&indices));
+    let index_buffer: Buffer = Buffer {
+        data: index_buffer_data,
+    };
+
+    let mut vertex_id: u32 = 0;
+    let mut index_id: u32 = 0;
+
+    unsafe {
+        glGenBuffers(1, &mut vertex_id);
+        glBindBuffer(GL_ARRAY_BUFFER, vertex_id);
+        glBufferData(
+            GL_ARRAY_BUFFER,
+            (vertex_buffer.data.len() * std::mem::size_of::<u8>()) as isize,
+            vertex_buffer.data.as_ptr().cast(),
+            GL_STATIC_DRAW,
+        );
+
+        glGenBuffers(1, &mut index_id);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_id);
+        glBufferData(
+            GL_ELEMENT_ARRAY_BUFFER,
+            (index_buffer.data.len() * std::mem::size_of::<u8>()) as isize,
+            index_buffer.data.as_ptr().cast(),
+            GL_STATIC_DRAW,
+        );
+    }
+
+    let mesh: Mesh = Mesh {
+        gl_buffer_id: vertex_id,
+        gl_index_id: index_id,
+        sub_meshes: vec![sub_mesh],
+        attributes: vec![position_attribute],
+    };
+
+    Model { meshes: vec![mesh] }
+}
 
 fn generate_sphere_model() -> Model {
     let mut positions: Vec<f32> = Vec::new();
@@ -476,3 +649,163 @@ fn main() {
         }
     });
 }
+
+static SKYBOX_RESOLUTION: i32 = 4096;
+fn generate_skybox_texture(texture: render::texture::Texture) -> render::texture::Texture {
+    let mut frame_buffer: u32 = 0;
+    let mut skybox_texture: u32 = 0;
+    unsafe {
+        glGenFramebuffers(1, &mut frame_buffer);
+        glBindFramebuffer(GL_FRAMEBUFFER, frame_buffer);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, 0);
+
+        glGenTextures(1, &mut skybox_texture);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, skybox_texture);
+
+        for index in 0..5 {
+            let texture_target: GLenum = GLenum(GL_TEXTURE_CUBE_MAP_POSITIVE_X.0 + index as u32);
+            glTexImage2D(
+                texture_target,
+                0,
+                GL_RGB32F.0 as i32,
+                SKYBOX_RESOLUTION,
+                SKYBOX_RESOLUTION,
+                0,
+                GL_RGB,
+                GL_FLOAT,
+                std::ptr::null(),
+            );
+
+            glTexParameteri(
+                GL_TEXTURE_CUBE_MAP,
+                GL_TEXTURE_WRAP_S,
+                GL_CLAMP_TO_EDGE.0 as i32,
+            );
+            glTexParameteri(
+                GL_TEXTURE_CUBE_MAP,
+                GL_TEXTURE_WRAP_T,
+                GL_CLAMP_TO_EDGE.0 as i32,
+            );
+            glTexParameteri(
+                GL_TEXTURE_CUBE_MAP,
+                GL_TEXTURE_WRAP_R,
+                GL_CLAMP_TO_EDGE.0 as i32,
+            );
+            glTexParameteri(
+                GL_TEXTURE_CUBE_MAP,
+                GL_TEXTURE_MIN_FILTER,
+                GL_LINEAR.0 as i32,
+            );
+            glTexParameteri(
+                GL_TEXTURE_CUBE_MAP,
+                GL_TEXTURE_MAG_FILTER,
+                GL_LINEAR.0 as i32,
+            );
+        }
+
+        let angle: f32 = 90.0;
+        let capture_projection: math::Mat4 =
+            math::shared::perspective(angle.to_radians(), 1.0, 0.1, 10.0);
+
+        let capture_views: Vec<math::Mat4> = vec![
+            math::shared::look_at(
+                &math::Point3::new(0.0, 0.0, 0.0),
+                &math::Point3::new(1.0, 0.0, 0.0),
+                &math::Vec3::new(0.0, 1.0, 0.0),
+            ),
+            math::shared::look_at(
+                &math::Point3::new(0.0, 0.0, 0.0),
+                &math::Point3::new(-1.0, 0.0, 0.0),
+                &math::Vec3::new(0.0, -1.0, 0.0),
+            ),
+            math::shared::look_at(
+                &math::Point3::new(0.0, 0.0, 0.0),
+                &math::Point3::new(0.0, 1.0, 0.0),
+                &math::Vec3::new(0.0, 0.0, 1.0),
+            ),
+            math::shared::look_at(
+                &math::Point3::new(0.0, 0.0, 0.0),
+                &math::Point3::new(0.0, -1.0, 0.0),
+                &math::Vec3::new(0.0, 0.0, -1.0),
+            ),
+            math::shared::look_at(
+                &math::Point3::new(0.0, 0.0, 0.0),
+                &math::Point3::new(0.0, 0.0, 1.0),
+                &math::Vec3::new(0.0, -1.0, 0.0),
+            ),
+            math::shared::look_at(
+                &math::Point3::new(0.0, 0.0, 0.0),
+                &math::Point3::new(0.0, 0.0, -1.0),
+                &math::Vec3::new(0.0, -1.0, 0.0),
+            ),
+        ];
+
+        let pipeline = render::shader::Pipeline::new(
+            "resources/shaders/skybox.vs",
+            "resources/shaders/convertToCubeMap.fs",
+        )
+        .unwrap();
+
+        glUseProgram(pipeline.id);
+
+        pipeline.set_uniform_mat4("projection\0", &capture_projection);
+        pipeline.set_uniform_1i("hdrTexture", 0);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture.id);
+
+        glViewport(0, 0, SKYBOX_RESOLUTION, SKYBOX_RESOLUTION);
+        glBindFramebuffer(GL_FRAMEBUFFER, frame_buffer);
+
+        for index in 0..5 {
+            pipeline.set_uniform_mat4("view\0", &capture_views[index]);
+
+            let texture_target: GLenum = GLenum(GL_TEXTURE_CUBE_MAP_POSITIVE_X.0 + index as u32);
+            glFramebufferTexture2D(
+                GL_FRAMEBUFFER,
+                GL_COLOR_ATTACHMENT0,
+                texture_target,
+                skybox_texture,
+                0,
+            );
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            let model: Model = generate_cube_model();
+
+            let mesh: &Mesh = &model.meshes[0];
+            let sub_mesh: &SubMesh = &mesh.sub_meshes[0];
+
+            glBindBuffer(GL_ARRAY_BUFFER, mesh.gl_buffer_id);
+
+            for attribute in &mesh.attributes {
+                let format: &Format = &attribute.format;
+                glVertexAttribPointer(
+                    attribute.slot as u32,
+                    format.get_dimension_size() as i32,
+                    GL_FLOAT,
+                    0,
+                    format.get_stride() as i32,
+                    attribute.get_total_offset() as *const _,
+                );
+                glEnableVertexAttribArray(attribute.slot as u32);
+            }
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.gl_index_id);
+
+            let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
+            glDrawElements(
+                GL_TRIANGLES,
+                sub_mesh.num_indices as i32,
+                GL_UNSIGNED_INT,
+                start_index as *const _,
+            );
+        }
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDeleteFramebuffers(1, &frame_buffer);
+    }
+
+    render::texture::Texture {
+        id: skybox_texture,
+        tex_type: render::texture::Type::Tex2D,
+    }
+}
+//fn generate_ibl_environment(image_path: &'static str) -> (Texture, Texture, Texture) {}
