@@ -6,5 +6,7 @@
 // Distributed under the MIT Lisense
 // https://mit-license.org/
 
+pub mod buffer;
 pub mod shader;
 pub mod texture;
+pub use buffer::Buffer;

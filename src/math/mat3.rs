@@ -6,10 +6,12 @@
 // Distributed under the MIT Lisense
 // https://mit-license.org/
 
-//use std::convert::From;
-use crate::math::vec3::Vec3;
 use std::cmp::PartialEq;
+use std::convert::From;
 use std::ops::{Index, IndexMut, Mul};
+
+use super::Mat4;
+use super::Vec3;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Mat3 {
@@ -17,9 +19,10 @@ pub struct Mat3 {
 }
 
 impl Mat3 {
-    // pub fn new(v1: Vec3, v2: Vec3, v3: Vec3) -> Mat3 {
-    //     Mat3 { n: [v1, v2, v3] }
-    // }
+    pub fn new(v1: Vec3, v2: Vec3, v3: Vec3) -> Mat3 {
+        Mat3 { n: [v1, v2, v3] }
+    }
+
     pub fn identity() -> Mat3 {
         Mat3 {
             n: [
@@ -31,6 +34,11 @@ impl Mat3 {
     }
 }
 
+impl From<Mat4> for Mat3 {
+    fn from(m: Mat4) -> Mat3 {
+        Mat3::new(Vec3::from(m[0]), Vec3::from(m[1]), Vec3::from(m[2]))
+    }
+}
 impl Index<usize> for Mat3 {
     type Output = Vec3;
     fn index(&self, index: usize) -> &Vec3 {

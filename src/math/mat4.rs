@@ -6,9 +6,11 @@
 // Distributed under the MIT Lisense
 // https://mit-license.org/
 
-use crate::math::ops::{Determinant, Inverse, Transpose};
-use crate::math::vec4::Vec4;
+use super::ops::{Determinant, Inverse, Transpose};
+use super::{Mat3, Vec4};
+
 use std::cmp::PartialEq;
+use std::convert::From;
 use std::fmt;
 use std::ops::{Div, Index, IndexMut, Mul};
 
@@ -42,6 +44,17 @@ impl Mat4 {
 
     pub fn as_ptr(&self) -> *const f32 {
         &self[0].x
+    }
+}
+
+impl From<Mat3> for Mat4 {
+    fn from(m: Mat3) -> Mat4 {
+        Mat4::new(
+            Vec4::from(m[0]),
+            Vec4::from(m[1]),
+            Vec4::from(m[2]),
+            Vec4::new(0.0, 0.0, 0.0, 1.0),
+        )
     }
 }
 

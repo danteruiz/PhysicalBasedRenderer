@@ -6,10 +6,11 @@
 // Distributed under the MIT Lisense
 // https://mit-license.org/
 
-use crate::math::ops::{Cross, Dot, Normalize};
-use crate::math::point3::Point3;
+use super::ops::{Cross, Dot, Normalize};
+use super::{Point3, Vec4};
 
 use std::cmp::PartialEq;
+use std::convert::From;
 use std::fmt;
 use std::ops::{Add, Div, Index, IndexMut, Mul, Sub};
 
@@ -23,7 +24,7 @@ pub struct Vec3 {
 
 impl Vec3 {
     pub fn new(x: f32, y: f32, z: f32) -> Vec3 {
-        Vec3 { x: x, y: y, z: z }
+        Vec3 { x, y, z }
     }
 
     pub fn inverse(&self) -> Vec3 {
@@ -56,6 +57,12 @@ impl Vec3 {
 
     pub fn as_ptr(&self) -> *const f32 {
         &self.x
+    }
+}
+
+impl From<Vec4> for Vec3 {
+    fn from(v: Vec4) -> Vec3 {
+        Vec3::new(v.x, v.y, v.z)
     }
 }
 

@@ -14,8 +14,6 @@ extern crate glutin;
 mod math;
 mod render;
 
-use std::ptr::null;
-
 //use gl46::{gl_command_types::*, gl_core_types::*, gl_enumerations::*, GlFns::*};
 use gl33::{gl_enumerations::*, global_loader::*, GLenum};
 use glutin::{
@@ -24,8 +22,7 @@ use glutin::{
     window::WindowBuilder,
 };
 
-use crate::render::texture;
-
+//use crate::render::texture;
 #[allow(dead_code)]
 #[repr(u8)]
 #[derive(Copy, Debug, Clone)]
@@ -95,20 +92,16 @@ enum Slot {
 }
 
 #[derive(Copy, Debug, Clone)]
-struct Attribute {
+pub struct Attribute {
     format: Format,
     slot: Slot,
-    offset: usize,
+    pub offset: usize,
 }
 
 impl Attribute {
-    fn get_total_offset(self) -> usize {
+    pub fn get_total_offset(self) -> usize {
         return self.offset * self.format.get_type_size();
     }
-}
-
-struct Buffer {
-    data: Vec<u8>,
 }
 
 struct SubMesh {
@@ -187,11 +180,11 @@ fn generate_quad_model() -> Model {
     buffer_data.extend_from_slice(to_byte_slice(&normals));
     buffer_data.extend_from_slice(to_byte_slice(&tex_coords));
 
-    let vertex_buffer: Buffer = Buffer { data: buffer_data };
+    let vertex_buffer: render::Buffer = render::Buffer { data: buffer_data };
 
     let mut index_buffer_data: Vec<u8> = Vec::new();
     index_buffer_data.extend_from_slice(to_byte_slice(&indices));
-    let index_buffer: Buffer = Buffer {
+    let index_buffer: render::Buffer = render::Buffer {
         data: index_buffer_data,
     };
 
@@ -269,11 +262,11 @@ fn generate_cube_model() -> Model {
     let mut buffer_data: Vec<u8> = Vec::new();
     buffer_data.extend_from_slice(to_byte_slice(&positions));
 
-    let vertex_buffer: Buffer = Buffer { data: buffer_data };
+    let vertex_buffer: render::Buffer = render::Buffer { data: buffer_data };
 
     let mut index_buffer_data: Vec<u8> = Vec::new();
     index_buffer_data.extend_from_slice(to_byte_slice(&indices));
-    let index_buffer: Buffer = Buffer {
+    let index_buffer: render::Buffer = render::Buffer {
         data: index_buffer_data,
     };
 
@@ -381,11 +374,11 @@ fn generate_sphere_model() -> Model {
     let mut buffer_data: Vec<u8> = Vec::new();
     buffer_data.extend_from_slice(to_byte_slice(&positions[..]));
     buffer_data.extend_from_slice(to_byte_slice(&normals[..]));
-    let vertex_buffer: Buffer = Buffer { data: buffer_data };
+    let vertex_buffer: render::Buffer = render::Buffer { data: buffer_data };
 
     let mut index_buffer_data: Vec<u8> = Vec::new();
     index_buffer_data.extend_from_slice(to_byte_slice(&indices[..]));
-    let index_buffer: Buffer = Buffer {
+    let index_buffer: render::Buffer = render::Buffer {
         data: index_buffer_data,
     };
 
@@ -453,6 +446,58 @@ const MATERIAL: Material = Material {
     metallic: 1.0,
     ao: 1.0,
 };
+
+fn render_skybox(
+    model: &Model,
+    projection: math::Mat4,
+    view: math::Mat4,
+    pipeline: &render::shader::Pipeline,
+    skybox_texture: &render::texture::Texture,
+) {
+    unsafe {
+        glDepthMask(GL_FALSE.0 as u8);
+    }
+
+    glUseProgram(pipeline.id);
+    pipeline.set_uniform_mat4("projection\0", &projection);
+    let new_view = math::Mat4::from(math::Mat3::from(view));
+    pipeline.set_uniform_mat4("view\0", &new_view); //&math::Mat4::from(math::Mat3::from(view)));
+
+    let mesh = &model.meshes[0];
+    let sub_mesh = &mesh.sub_meshes[0];
+
+    unsafe {
+        pipeline.set_uniform_1i("skybox\0", 0);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, skybox_texture.id);
+        glBindBuffer(GL_ARRAY_BUFFER, mesh.gl_buffer_id);
+
+        for attribute in &mesh.attributes {
+            let format: &Format = &attribute.format;
+            glVertexAttribPointer(
+                attribute.slot as u32,
+                format.get_dimension_size() as i32,
+                GL_FLOAT,
+                0,
+                format.get_stride() as i32,
+                attribute.get_total_offset() as *const _,
+            );
+            glEnableVertexAttribArray(attribute.slot as u32);
+        }
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.gl_index_id);
+
+        let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
+        glDrawElements(
+            GL_TRIANGLES,
+            sub_mesh.num_indices as i32,
+            GL_UNSIGNED_INT,
+            start_index as *const _,
+        );
+
+        glDepthMask(GL_TRUE.0 as u8);
+    }
+}
+
 fn render_model(
     model: &Model,
     projection: math::Mat4,
@@ -539,11 +584,15 @@ fn main() {
     }
 
     let sphere_model: Model = generate_sphere_model();
+    let cube_model: Model = generate_cube_model();
 
     let fragment_shader_file: &'static str = "resources/shaders/pbr.fs";
     let vertex_shader_file: &'static str = "resources/shaders/pbr.vs";
 
     let pipeline = render::shader::Pipeline::new(vertex_shader_file, fragment_shader_file).unwrap();
+    let skybox_pipeline =
+        render::shader::Pipeline::new("resources/shaders/skybox.vs", "resources/shaders/skybox.fs")
+            .unwrap();
     let target_position = math::Point3::new(0.0, 0.0, 0.0);
     let view = math::shared::look_at(&EYE_POSITION, &target_position, &math::shared::UNIT_Y);
 
@@ -557,6 +606,7 @@ fn main() {
         command: false,
     };
 
+    let ibl_textures = generate_ibl_environment("resources/images/IBL/PaperMill/PaperMill.hdr");
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
         match event {
@@ -617,8 +667,6 @@ fn main() {
                     }
                 });
 
-                // let (output, shapes) = egui_context.end_frame();
-                // let clipped_meshes = egui_context.tessellate(shapes);
                 unsafe {
                     glEnable(GL_BLEND);
                     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -642,7 +690,18 @@ fn main() {
                 unsafe {
                     glViewport(0, 0, inner_size.width as i32, inner_size.height as i32);
                 }
+                render_skybox(
+                    &cube_model,
+                    projection,
+                    view,
+                    &skybox_pipeline,
+                    &ibl_textures.0,
+                );
                 render_model(&sphere_model, projection, view, &pipeline);
+
+                // let (output, shapes) = egui_context.end_frame();
+                // let clipped_meshes = egui_context.tessellate(shapes);
+
                 let _ = context.swap_buffers();
             }
             _ => (),
@@ -662,7 +721,7 @@ fn generate_skybox_texture(texture: render::texture::Texture) -> render::texture
         glGenTextures(1, &mut skybox_texture);
         glBindTexture(GL_TEXTURE_CUBE_MAP, skybox_texture);
 
-        for index in 0..5 {
+        for index in 0..6 {
             let texture_target: GLenum = GLenum(GL_TEXTURE_CUBE_MAP_POSITIVE_X.0 + index as u32);
             glTexImage2D(
                 texture_target,
@@ -711,7 +770,7 @@ fn generate_skybox_texture(texture: render::texture::Texture) -> render::texture
             math::shared::look_at(
                 &math::Point3::new(0.0, 0.0, 0.0),
                 &math::Point3::new(1.0, 0.0, 0.0),
-                &math::Vec3::new(0.0, 1.0, 0.0),
+                &math::Vec3::new(0.0, -1.0, 0.0),
             ),
             math::shared::look_at(
                 &math::Point3::new(0.0, 0.0, 0.0),
@@ -749,14 +808,14 @@ fn generate_skybox_texture(texture: render::texture::Texture) -> render::texture
         glUseProgram(pipeline.id);
 
         pipeline.set_uniform_mat4("projection\0", &capture_projection);
-        pipeline.set_uniform_1i("hdrTexture", 0);
+        pipeline.set_uniform_1i("hdrTexture\0", 0);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture.id);
 
         glViewport(0, 0, SKYBOX_RESOLUTION, SKYBOX_RESOLUTION);
         glBindFramebuffer(GL_FRAMEBUFFER, frame_buffer);
 
-        for index in 0..5 {
+        for index in 0..6 {
             pipeline.set_uniform_mat4("view\0", &capture_views[index]);
 
             let texture_target: GLenum = GLenum(GL_TEXTURE_CUBE_MAP_POSITIVE_X.0 + index as u32);
@@ -808,4 +867,290 @@ fn generate_skybox_texture(texture: render::texture::Texture) -> render::texture
         tex_type: render::texture::Type::Tex2D,
     }
 }
-//fn generate_ibl_environment(image_path: &'static str) -> (Texture, Texture, Texture) {}
+
+fn generate_ibl_environment(
+    image_path: &'static str,
+) -> (
+    render::texture::Texture,
+    render::texture::Texture,
+    render::texture::Texture,
+) {
+    let quad_model: Model = generate_quad_model();
+
+    let hdr_texture = render::texture::Texture::new(image_path);
+    let mut irradiance_texture = render::texture::Texture {
+        id: 0,
+        tex_type: render::texture::Type::Tex2D,
+    };
+
+    let mut prefilter_texture = render::texture::Texture {
+        id: 0,
+        tex_type: render::texture::Type::Tex2D,
+    };
+
+    let mut capture_fbo: u32 = 0;
+    let mut capture_rbo: u32 = 0;
+
+    let skybox_texture = generate_skybox_texture(hdr_texture);
+    unsafe {
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LEQUAL);
+        glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+
+        glGenRenderbuffers(1, &mut capture_rbo);
+        glGenFramebuffers(1, &mut capture_fbo);
+
+        let angle: f32 = 90.0;
+        let capture_projection: math::Mat4 =
+            math::shared::perspective(angle.to_radians(), 1.0, 0.1, 10.0);
+
+        let capture_views: Vec<math::Mat4> = vec![
+            math::shared::look_at(
+                &math::Point3::new(0.0, 0.0, 0.0),
+                &math::Point3::new(1.0, 0.0, 0.0),
+                &math::Vec3::new(0.0, 1.0, 0.0),
+            ),
+            math::shared::look_at(
+                &math::Point3::new(0.0, 0.0, 0.0),
+                &math::Point3::new(-1.0, 0.0, 0.0),
+                &math::Vec3::new(0.0, -1.0, 0.0),
+            ),
+            math::shared::look_at(
+                &math::Point3::new(0.0, 0.0, 0.0),
+                &math::Point3::new(0.0, 1.0, 0.0),
+                &math::Vec3::new(0.0, 0.0, 1.0),
+            ),
+            math::shared::look_at(
+                &math::Point3::new(0.0, 0.0, 0.0),
+                &math::Point3::new(0.0, -1.0, 0.0),
+                &math::Vec3::new(0.0, 0.0, -1.0),
+            ),
+            math::shared::look_at(
+                &math::Point3::new(0.0, 0.0, 0.0),
+                &math::Point3::new(0.0, 0.0, 1.0),
+                &math::Vec3::new(0.0, -1.0, 0.0),
+            ),
+            math::shared::look_at(
+                &math::Point3::new(0.0, 0.0, 0.0),
+                &math::Point3::new(0.0, 0.0, -1.0),
+                &math::Vec3::new(0.0, -1.0, 0.0),
+            ),
+        ];
+
+        glBindTexture(GL_TEXTURE_CUBE_MAP, skybox_texture.id);
+        glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+        glGenTextures(1, &mut irradiance_texture.id);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, irradiance_texture.id);
+        for index in 0..5 {
+            let texture_target: GLenum = GLenum(GL_TEXTURE_CUBE_MAP_POSITIVE_X.0 + index as u32);
+            glTexImage2D(
+                texture_target,
+                0,
+                GL_RGB16F.0 as i32,
+                32,
+                32,
+                0,
+                GL_RGB,
+                GL_FLOAT,
+                std::ptr::null(),
+            );
+        }
+
+        glTexParameteri(
+            GL_TEXTURE_CUBE_MAP,
+            GL_TEXTURE_WRAP_S,
+            GL_CLAMP_TO_EDGE.0 as i32,
+        );
+        glTexParameteri(
+            GL_TEXTURE_CUBE_MAP,
+            GL_TEXTURE_WRAP_T,
+            GL_CLAMP_TO_EDGE.0 as i32,
+        );
+        glTexParameteri(
+            GL_TEXTURE_CUBE_MAP,
+            GL_TEXTURE_WRAP_R,
+            GL_CLAMP_TO_EDGE.0 as i32,
+        );
+        glTexParameteri(
+            GL_TEXTURE_CUBE_MAP,
+            GL_TEXTURE_MIN_FILTER,
+            GL_LINEAR.0 as i32,
+        );
+        glTexParameteri(
+            GL_TEXTURE_CUBE_MAP,
+            GL_TEXTURE_MAG_FILTER,
+            GL_LINEAR.0 as i32,
+        );
+
+        glBindFramebuffer(GL_FRAMEBUFFER, capture_fbo);
+        glBindRenderbuffer(GL_RENDERBUFFER, capture_rbo);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 32, 32);
+
+        let irrandiance_pipeline = render::shader::Pipeline::new(
+            "resources/shaders/skybox.vs",
+            "resources/shaders/irradianceConvolution.fs",
+        )
+        .unwrap();
+
+        glUseProgram(irrandiance_pipeline.id);
+
+        irrandiance_pipeline.set_uniform_1i("envMap\0", 0);
+        irrandiance_pipeline.set_uniform_mat4("projection\0", &capture_projection);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, skybox_texture.id);
+
+        glViewport(0, 0, 32, 32);
+        glBindFramebuffer(GL_FRAMEBUFFER, capture_fbo);
+
+        let mesh: &Mesh = &quad_model.meshes[0];
+        let sub_mesh: &SubMesh = &mesh.sub_meshes[0];
+
+        glBindBuffer(GL_ARRAY_BUFFER, mesh.gl_buffer_id);
+
+        for attribute in &mesh.attributes {
+            let format: &Format = &attribute.format;
+            glVertexAttribPointer(
+                attribute.slot as u32,
+                format.get_dimension_size() as i32,
+                GL_FLOAT,
+                0,
+                format.get_stride() as i32,
+                attribute.get_total_offset() as *const _,
+            );
+            glEnableVertexAttribArray(attribute.slot as u32);
+        }
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.gl_index_id);
+
+        for index in 0..5 {
+            irrandiance_pipeline.set_uniform_mat4("view\0", &capture_views[index]);
+            let texture_target: GLenum = GLenum(GL_TEXTURE_CUBE_MAP_POSITIVE_X.0 + index as u32);
+
+            glFramebufferTexture2D(
+                GL_FRAMEBUFFER,
+                GL_COLOR_ATTACHMENT0,
+                texture_target,
+                irradiance_texture.id,
+                0,
+            );
+
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
+            glDrawElements(
+                GL_TRIANGLES,
+                sub_mesh.num_indices as i32,
+                GL_UNSIGNED_INT,
+                start_index as *const _,
+            );
+        }
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        glGenTextures(1, &mut prefilter_texture.id);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, prefilter_texture.id);
+
+        for index in 0..5 {
+            let texture_target: GLenum = GLenum(GL_TEXTURE_CUBE_MAP_POSITIVE_X.0 + index as u32);
+            glTexImage2D(
+                texture_target,
+                0,
+                GL_RGB16F.0 as i32,
+                128,
+                128,
+                0,
+                GL_RGB,
+                GL_FLOAT,
+                std::ptr::null(),
+            );
+        }
+
+        glTexParameteri(
+            GL_TEXTURE_CUBE_MAP,
+            GL_TEXTURE_WRAP_S,
+            GL_CLAMP_TO_EDGE.0 as i32,
+        );
+        glTexParameteri(
+            GL_TEXTURE_CUBE_MAP,
+            GL_TEXTURE_WRAP_T,
+            GL_CLAMP_TO_EDGE.0 as i32,
+        );
+        glTexParameteri(
+            GL_TEXTURE_CUBE_MAP,
+            GL_TEXTURE_WRAP_R,
+            GL_CLAMP_TO_EDGE.0 as i32,
+        );
+        glTexParameteri(
+            GL_TEXTURE_CUBE_MAP,
+            GL_TEXTURE_MIN_FILTER,
+            GL_LINEAR.0 as i32,
+        );
+        glTexParameteri(
+            GL_TEXTURE_CUBE_MAP,
+            GL_TEXTURE_MAG_FILTER,
+            GL_LINEAR.0 as i32,
+        );
+
+        glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+        let prefiler_pipeline = render::shader::Pipeline::new(
+            "resources/shaders/skybox.vs",
+            "resources/shaders/prefilterMap.fs",
+        )
+        .unwrap();
+
+        glUseProgram(prefiler_pipeline.id);
+        prefiler_pipeline.set_uniform_mat4("projection\0", &capture_projection);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, skybox_texture.id);
+        glBindFramebuffer(GL_FRAMEBUFFER, capture_fbo);
+
+        let max_mip_levels = 5;
+
+        for mip in 0..max_mip_levels {
+            let pow = 0.5f64.powf(max_mip_levels as f64);
+            let mip_width: u32 = (128.0 * pow) as u32;
+            let mip_height: u32 = (128.0 * pow) as u32;
+
+            glBindRenderbuffer(GL_RENDERBUFFER, capture_rbo);
+            glRenderbufferStorage(
+                GL_RENDERBUFFER,
+                GL_DEPTH_COMPONENT24,
+                mip_width as i32,
+                mip_height as i32,
+            );
+
+            glViewport(0, 0, mip_width as i32, mip_height as i32);
+
+            let roughness = mip as f32 / (max_mip_levels - 1) as f32;
+            prefiler_pipeline.set_uniform_1f("roughness\0", roughness);
+
+            for index in 0..6 {
+                prefiler_pipeline.set_uniform_mat4("view\0", &capture_views[index]);
+                let texture_target: GLenum =
+                    GLenum(GL_TEXTURE_CUBE_MAP_POSITIVE_X.0 + index as u32);
+                glFramebufferTexture2D(
+                    GL_FRAMEBUFFER,
+                    GL_COLOR_ATTACHMENT0,
+                    texture_target,
+                    prefilter_texture.id,
+                    mip,
+                );
+
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+                let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
+                glDrawElements(
+                    GL_TRIANGLES,
+                    sub_mesh.num_indices as i32,
+                    GL_UNSIGNED_INT,
+                    start_index as *const _,
+                );
+            }
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
+    }
+
+    (skybox_texture, irradiance_texture, prefilter_texture)
+}
