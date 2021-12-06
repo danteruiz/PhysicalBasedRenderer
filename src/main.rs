@@ -21,6 +21,7 @@ use glutin::{
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
+use render::egui_painter;
 
 //use crate::render::texture;
 #[allow(dead_code)]
@@ -421,7 +422,7 @@ const EYE_POSITION: math::Point3 = math::Point3 {
     z: 2.0,
 };
 
-const LIGHT: Light = Light {
+static mut LIGHT: Light = Light {
     intensity: 0.4,
     ambient: 1.0,
     position: math::Vec3 {
@@ -436,7 +437,7 @@ const LIGHT: Light = Light {
     },
 };
 
-const MATERIAL: Material = Material {
+static mut MATERIAL: Material = Material {
     color: math::Vec3 {
         x: 1.0,
         y: 0.2,
@@ -503,6 +504,7 @@ fn render_model(
     projection: math::Mat4,
     view: math::Mat4,
     pipeline: &render::shader::Pipeline,
+    texture_cache: &render::texture::TextureCache,
 ) {
     for mesh in &model.meshes {
         let model_matrix = math::Mat4::identity();
@@ -543,6 +545,13 @@ fn render_model(
                 pipeline.set_uniform_1f("material.ao\0", MATERIAL.ao);
                 pipeline.set_uniform_1f("material.specular\0", MATERIAL.roughness);
                 pipeline.set_uniform_point3("camera_position\0", &camera_position);
+                pipeline.set_uniform_1i("u_albedoMap\0", 0);
+                pipeline.set_uniform_1i("u_normalMap\0", 1);
+                pipeline.set_uniform_1i("u_metallicMap\0", 2);
+
+                enable_texture(0, texture_cache.white_texture.id);
+                enable_texture(1, texture_cache.blue_texture.id);
+                enable_texture(2, texture_cache.gray_texture.id);
 
                 let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
                 glDrawElements(
@@ -553,6 +562,14 @@ fn render_model(
                 );
             }
         }
+    }
+}
+
+fn enable_texture(slot: u32, texture_id: u32) {
+    let texture_slot = GLenum(GL_TEXTURE0.0 + slot);
+    unsafe {
+        glActiveTexture(texture_slot);
+        glBindTexture(GL_TEXTURE_2D, texture_id);
     }
 }
 
@@ -607,6 +624,10 @@ fn main() {
     };
 
     let ibl_textures = generate_ibl_environment("resources/images/IBL/PaperMill/PaperMill.hdr");
+
+    let texture_cache = render::texture::TextureCache::new();
+    let _egui_painter = render::egui_painter::EguiPainter::new();
+    egui_context.set_visuals(egui::Visuals::light());
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
         match event {
@@ -660,10 +681,27 @@ fn main() {
             Event::MainEventsCleared => {
                 let final_input = raw_input.clone();
                 egui_context.begin_frame(final_input);
-                egui::CentralPanel::default().show(&egui_context, |ui| {
-                    ui.label("Hello world!");
-                    if ui.button("Click me").clicked() {
-                        println!("button clicked");
+                egui::Window::new("").show(&egui_context, |ui| {
+                    ui.label("Lighting");
+                    ui.separator();
+                    unsafe {
+                        ui.add(egui::Slider::new(&mut LIGHT.position.x, -20.0..=20.0).text(": x"));
+                        ui.add(egui::Slider::new(&mut LIGHT.position.y, -20.0..=20.0).text(": y"));
+                        ui.add(egui::Slider::new(&mut LIGHT.position.z, -20.0..=20.0).text(": z"));
+                    }
+
+                    ui.label("Material");
+                    ui.separator();
+
+                    unsafe {
+                        ui.add(
+                            egui::Slider::new(&mut MATERIAL.roughness, 0.001..=1.0)
+                                .text("roughness"),
+                        );
+                        ui.add(
+                            egui::Slider::new(&mut MATERIAL.metallic, 0.001..=1.0).text("metallic"),
+                        );
+                        //ui.add(egui::Slider::new(&mut LIGHT.position.z, 0.001..=1.0));
                     }
                 });
 
@@ -697,12 +735,17 @@ fn main() {
                     &skybox_pipeline,
                     &ibl_textures.0,
                 );
-                render_model(&sphere_model, projection, view, &pipeline);
+                render_model(&sphere_model, projection, view, &pipeline, &texture_cache);
 
-                // let (output, shapes) = egui_context.end_frame();
-                // let clipped_meshes = egui_context.tessellate(shapes);
+                let (_, shapes) = egui_context.end_frame();
+                let clipped_meshes = egui_context.tessellate(shapes);
+
+                let window_size =
+                    math::Vec2::new(inner_size.width as f32, inner_size.height as f32);
+                _egui_painter.paint(&clipped_meshes, &egui_context.texture(), &window_size);
 
                 let _ = context.swap_buffers();
+                raw_input = egui::RawInput::default()
             }
             _ => (),
         }

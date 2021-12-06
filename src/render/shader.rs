@@ -28,6 +28,16 @@ impl Pipeline {
         }
     }
 
+    pub fn set_uniform_vec2(&self, name: &str, vec: &math::Vec2) {
+        unsafe {
+            glUniform2fv(
+                glGetUniformLocation(self.id, name.as_ptr()),
+                1,
+                vec.as_ptr(),
+            );
+        }
+    }
+
     pub fn set_uniform_vec3(&self, name: &str, vec: &math::Vec3) {
         unsafe {
             glUniform3fv(

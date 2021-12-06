@@ -20,8 +20,12 @@ uniform vec3 camera_position;
 uniform Material material;
 uniform Light light;
 
+uniform sampler2D u_albedoMap;
+uniform sampler2D u_normalMap;
+uniform sampler2D u_metallicMap;
+
 in vec3 vertex_normal;
-in vec3 vertex_position;;
+in vec3 vertex_position;
 
 out vec4 FragColor;
 void main() {
@@ -41,7 +45,7 @@ void main() {
 
     vec3 radiance = (light.color * vec3(300.0)) * attenuation;
     vec3 f0 = mix(vec3(0.04), material.color, material.roughness);
-    vec3 albedo = material.color * (vec3(1.0) - vec3(0.04));
+    vec3 albedo = (material.color * texture(u_albedoMap, vec2(0.0, 0.0)).rgb) * (vec3(1.0) - vec3(0.04));
     albedo *= 1.0 - material.metallic;
 
     float D = NDF(NdotH, material.roughness);

@@ -7,7 +7,14 @@
 // https://mit-license.org/
 use gl33::{gl_core_types::*, gl_enumerations::*, global_loader::*};
 use image;
+
 use std::fs;
+use std::rc;
+
+const WHITE_COLOR: [u8; 4] = [0xFF, 0xFF, 0xFF, 0xFF];
+const BLUE_COLOR: [u8; 4] = [0x80, 0x80, 0xFF, 0xFF];
+const GRAY_COLOR: [u8; 4] = [0x80, 0x80, 0x80, 0xFF];
+const BLACK_COLOR: [u8; 4] = [0x00, 0x00, 0x00, 0xFF];
 
 pub enum Type {
     Tex1D,
@@ -66,6 +73,64 @@ impl Texture {
         Texture {
             id: texture_id,
             tex_type: Type::Tex2D,
+        }
+    }
+
+    pub fn create(pixels: &[u8; 4]) -> rc::Rc<Texture> {
+        let mut texture = Texture::empty();
+
+        unsafe {
+            glGenTextures(1, &mut texture.id);
+
+            glBindTexture(GL_TEXTURE_2D, texture.id);
+
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE.0 as i32);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE.0 as i32);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR.0 as i32);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR.0 as i32);
+
+            let format: GLenum = GL_RGBA;
+            let texture_size: GLenum = GL_UNSIGNED_BYTE;
+
+            glTexImage2D(
+                GL_TEXTURE_2D,
+                0,
+                GL_RGB.0 as i32,
+                1,
+                1,
+                0,
+                format,
+                texture_size,
+                pixels.as_ptr().cast(),
+            );
+        }
+
+        rc::Rc::new(texture)
+    }
+
+    pub fn empty() -> Texture {
+        Texture {
+            id: 0,
+            tex_type: Type::Tex2D,
+        }
+    }
+}
+
+pub struct TextureCache {
+    pub blue_texture: rc::Rc<Texture>,
+    pub white_texture: rc::Rc<Texture>,
+    pub gray_texture: rc::Rc<Texture>,
+    pub black_texture: rc::Rc<Texture>,
+}
+
+impl TextureCache {
+    pub fn new() -> TextureCache {
+        TextureCache {
+            blue_texture: Texture::create(&BLUE_COLOR),
+            white_texture: Texture::create(&WHITE_COLOR),
+            gray_texture: Texture::create(&GRAY_COLOR),
+            black_texture: Texture::create(&BLACK_COLOR),
         }
     }
 }

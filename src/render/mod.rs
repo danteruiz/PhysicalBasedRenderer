@@ -7,6 +7,7 @@
 // https://mit-license.org/
 
 pub mod buffer;
+pub mod egui_painter;
 pub mod shader;
 pub mod texture;
 pub use buffer::Buffer;
