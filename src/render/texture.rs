@@ -105,7 +105,6 @@ impl Texture {
                 pixels.as_ptr().cast(),
             );
         }
-
         rc::Rc::new(texture)
     }
 

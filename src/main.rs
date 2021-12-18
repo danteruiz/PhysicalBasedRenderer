@@ -245,7 +245,6 @@ fn generate_cube_model() -> Model {
         16, 17, 18, 16, 18, 19, // front
         20, 21, 22, 20, 22, 23, // back
     ];
-
     let position_attribute: Attribute = Attribute {
         format: Format {
             dimension: Dimension::Vec3,
