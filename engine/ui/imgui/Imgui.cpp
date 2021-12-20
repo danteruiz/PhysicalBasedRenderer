@@ -2,8 +2,8 @@
 
 #include <imgui.h>
 
-#include <imgui_impl_glfw.h>
-#include <imgui_impl_opengl3.h>
+#include "bindings/imgui_impl_glfw.h"
+#include "bindings/imgui_impl_opengl3.h"
 
 static auto vector_getter = [](void *vec, int idx, const char **out_text)
 {

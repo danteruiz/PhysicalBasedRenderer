@@ -6,6 +6,7 @@
 #include "Shader.h"
 
 #include <cstdint>
+#include <array>
 
 DebugDraw::DebugDraw()
 {

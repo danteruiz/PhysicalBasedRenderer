@@ -1,6 +1,8 @@
 #pragma once
 
 #include "GL.h"
+
+#include <stdint.h>
 class GLObject
 {
 public:
