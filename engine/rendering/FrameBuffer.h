@@ -16,6 +16,7 @@
 #include <memory>
 namespace gpu
 {
+
 struct FrameBuffer
 {
     uint32_t width { 0 };

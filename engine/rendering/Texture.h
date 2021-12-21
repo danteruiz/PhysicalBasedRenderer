@@ -17,7 +17,6 @@
 #include <string>
 #include <unordered_map>
 
-
 struct Texture
 {
     using Pointer = std::shared_ptr<Texture>;
@@ -32,23 +31,23 @@ struct Texture
     Type m_type;
 };
 
-Texture::Pointer createTextureFromGLTF(int width, int height,
-                                       int component, int bits,
-                                       unsigned char *data);
+Texture::Pointer createTextureFromGLTF(int width, int height, Format textureFormat,
+                                       void const *data);
+Texture::Pointer createEmptyCubeMap(int width, int height, Format textureFormat);
 
-
-using TextureHandle = int32_t;
-class TextureCache {
+using TextureHandle = uint32_t;
+class TextureCache
+{
 public:
     TextureCache();
     ~TextureCache() = default;
     TextureHandle loadTexture(std::string const &filePath);
-    TextureHandle createTexture(int width, int height, int component, int bits,
-                                 void const *pixels);
-    Texture const &getTextureFromHandle(TextureHandle textureHandle);
-private:
-    int textureCount { 0 };
+    TextureHandle createTexture(std::string const &name, int width, int height,
+                                Format textureFormat, void const *pixels);
 
+    Texture const &getTextureFromHandle(TextureHandle textureHandle);
+
+private:
     std::unordered_map<std::string, TextureHandle> m_textureHandleMap;
     std::vector<Texture> m_textures;
 };

@@ -170,16 +170,7 @@ void rotateCameraAroundEntity(Entity const &entity, float deltaTime)
 
 DemoApplication::DemoApplication()
 {
-    glewExperimental = true;
-    if (glewInit() != GLEW_OK)
-    {
-        spdlog::debug("Failed to init glew");
-    }
-
-    glGenVertexArrays(1, &VAO);
-    glBindVertexArray(VAO);
     m_backend = std::make_shared<Backend>();
-
     m_debugUI = std::make_shared<DebugUI>(m_window);
     m_modelCache = std::make_shared<ModelCache>();
     camera.position = glm::vec3(0.0f, 0.0f, -4.0f);

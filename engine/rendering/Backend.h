@@ -16,12 +16,11 @@
 
 #include <memory>
 #include <vector>
-class Pipeline;
-class State;
+
 class Backend : public std::enable_shared_from_this<Backend>
 {
 public:
-    Backend() = default;
+    Backend();
     ~Backend() = default;
 
     void setVertexBuffer(Buffer::Pointer &buffer);
@@ -33,6 +32,5 @@ public:
 private:
     void syncBuffer(Buffer::Pointer &buffer, uint32_t type);
     std::vector<uint32_t> m_releasedBuffers;
-    Pipeline *m_pipline {nullptr};
-    State *m_state {nullptr};
+    uint32_t m_vao { 0 };
 };

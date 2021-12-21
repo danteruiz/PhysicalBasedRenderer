@@ -12,12 +12,23 @@
 
 #include "GL.h"
 
+#include <iostream>
 #include <spdlog/spdlog.h>
 
-void Backend::setVertexBuffer(Buffer::Pointer &buffer)
+Backend::Backend()
 {
-    syncBuffer(buffer, GL_ARRAY_BUFFER);
+    glewExperimental = true;
+
+    if (glewInit() != GLEW_OK)
+    {
+        std::cout << "Failed to init glew" << std::endl;
+    }
+
+    glGenVertexArrays(1, &m_vao);
+    glBindVertexArray(m_vao);
 }
+
+void Backend::setVertexBuffer(Buffer::Pointer &buffer) { syncBuffer(buffer, GL_ARRAY_BUFFER); }
 
 void Backend::setIndexBuffer(Buffer::Pointer &buffer)
 {
@@ -29,16 +40,15 @@ void Backend::syncBuffer(Buffer::Pointer &buffer, uint32_t bufferType)
     auto &gpuResource = buffer->m_gpuResource;
     if (!gpuResource)
     {
-        gpuResource.reset(
-            new gpu::Resource(gpu::Resource::Type::Buffer, shared_from_this()));
+        gpuResource.reset(new gpu::Resource(gpu::Resource::Type::Buffer, shared_from_this()));
         glGenBuffers(1, &gpuResource->m_id);
     }
 
     glBindBuffer(bufferType, gpuResource->m_id);
     if (buffer->m_dirty && buffer->m_data)
     {
-        glBufferData(bufferType, buffer->m_size,
-                     static_cast<void *>(buffer->m_data), GL_DYNAMIC_DRAW);
+        glBufferData(bufferType, buffer->m_size, static_cast<void *>(buffer->m_data),
+                     GL_DYNAMIC_DRAW);
         // auto error = glGetError();
         buffer->m_dirty = false;
     }
@@ -65,9 +75,8 @@ void Backend::enableAttributes(std::vector<Attribute> const &attributes)
         glEnableVertexAttribArray(static_cast<GLuint>(attribute.m_slot));
 
         Format const &format = attribute.m_format;
-        glVertexAttribPointer(static_cast<GLuint>(attribute.m_slot),
-                              format.getDimensionSize(), GL_FLOAT, GL_FALSE,
-                              format.getStride(),
-                              (void *)attribute.getTotalOffset());
+        glVertexAttribPointer(static_cast<GLuint>(attribute.m_slot), format.getDimensionSize(),
+                              GL_FLOAT, GL_FALSE, format.getStride(),
+                              (void *)(attribute.getTotalOffset()));
     }
 }
