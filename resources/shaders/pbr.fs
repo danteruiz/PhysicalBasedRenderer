@@ -159,7 +159,6 @@ void main() {
     vec2 brdf = texture(brdfLut, vec2(NdotV, pbrInfo.perceptualRoughness)).rg;
     vec3 specular = specularLight * (F * brdf.x + brdf.y);
     color += irradiance * pbrInfo.albedoColor;
-    color = pbrInfo.albedoColor;
     color += specular;
 
 #ifdef HAS_OCCLUSION_MAP

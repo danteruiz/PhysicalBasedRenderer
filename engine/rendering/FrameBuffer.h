@@ -11,10 +11,16 @@
 #pragma once
 
 #include "Texture.h"
+#include "Resource.h"
+
+#include <memory>
+namespace gpu
+{
 struct FrameBuffer
 {
-    uint32_t m_id { 0 };
-    uint32_t m_width { 0 };
-    uint32_t m_height { 0 };
-    Texture::Pointer m_texture { nullptr };
+    uint32_t width { 0 };
+    uint32_t height { 0 };
+    std::unique_ptr<gpu::Resouse> gpuResource { nullptr };
+    Texture::Pointer texture { nullptr };
 };
+}

@@ -27,7 +27,6 @@ void FileWatcher::checkForFilesUpdate()
             fileIter.second = lastWriteTime;
 
             auto callback =  m_callbackMap[fileIter.first];
-            callback(fileIter.first);
         }
     }
 }

@@ -371,7 +371,7 @@ void DemoApplication::exec()
 
     filesystem::FileWatcher fileWatcher;
 
-    fileWatcher.watchFile(fragmentShader, nullptr);
+    //fileWatcher.watchFile(fragmentShader, nullptr);
     while (!m_window->shouldClose())
     {
         fileWatcher.checkForFilesUpdate();
@@ -487,17 +487,28 @@ unsigned int DemoApplication::generateEnviromentMap()
     glm::mat4 captureProjection =
         glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
     glm::mat4 captureViews[] = {
-        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f),
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),
+                    glm::vec3(1.0f, 0.0f, 0.0f),
                     glm::vec3(0.0f, -1.0f, 0.0f)),
-        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f),
+
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),
+                    glm::vec3(-1.0f, 0.0f, 0.0f),
                     glm::vec3(0.0f, -1.0f, 0.0f)),
-        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f),
+
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),
+                    glm::vec3(0.0f, 1.0f, 0.0f),
                     glm::vec3(0.0f, 0.0f, 1.0f)),
-        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f),
+
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),
+                    glm::vec3(0.0f, -1.0f, 0.0f),
                     glm::vec3(0.0f, 0.0f, -1.0f)),
-        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f),
+
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),
+                    glm::vec3(0.0f, 0.0f, 1.0f),
                     glm::vec3(0.0f, -1.0f, 0.0f)),
-        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f),
+
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),
+                    glm::vec3(0.0f, 0.0f, -1.0f),
                     glm::vec3(0.0f, -1.0f, 0.0f))};
 
     m_convertToCubeMap->bind();
@@ -556,17 +567,28 @@ void DemoApplication::generateIBLEnvironment(std::string &texturePath)
     glm::mat4 captureProjection =
         glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
     glm::mat4 captureViews[] = {
-        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f),
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),
+                    glm::vec3(1.0f, 0.0f, 0.0f),
                     glm::vec3(0.0f, -1.0f, 0.0f)),
-        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f),
+
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),
+                    glm::vec3(-1.0f, 0.0f, 0.0f),
                     glm::vec3(0.0f, -1.0f, 0.0f)),
-        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f),
+
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),
+                    glm::vec3(0.0f, 1.0f, 0.0f),
                     glm::vec3(0.0f, 0.0f, 1.0f)),
-        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f),
+
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),
+                    glm::vec3(0.0f, -1.0f, 0.0f),
                     glm::vec3(0.0f, 0.0f, -1.0f)),
-        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f),
+
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),
+                    glm::vec3(0.0f, 0.0f, 1.0f),
                     glm::vec3(0.0f, -1.0f, 0.0f)),
-        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f),
+
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),
+                    glm::vec3(0.0f, 0.0f, -1.0f),
                     glm::vec3(0.0f, -1.0f, 0.0f))};
 
     glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);

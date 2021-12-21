@@ -13,7 +13,6 @@ Resource::~Resource()
 {
     if (auto backend = m_backend.lock())
     {
-        spdlog::debug("releasing object");
         backend->releaseResource(m_id, m_type);
     }
 }
