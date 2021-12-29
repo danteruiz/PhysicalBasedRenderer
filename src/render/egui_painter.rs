@@ -7,7 +7,7 @@
 // https://mit-license.org/
 
 use egui::ClippedMesh;
-use gl33::{gl_enumerations::*, global_loader::*, GLenum};
+use gl;
 
 use super::shader;
 use crate::math;
@@ -44,77 +44,77 @@ impl EguiPainter {
             let mut index_buffer: u32 = 0;
 
             unsafe {
-                glGenBuffers(1, &mut vertex_buffer);
-                glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
-                glBufferData(
-                    GL_ARRAY_BUFFER,
+                gl::GenBuffers(1, &mut vertex_buffer);
+                gl::BindBuffer(gl::ARRAY_BUFFER, vertex_buffer);
+                gl::BufferData(
+                    gl::ARRAY_BUFFER,
                     (vertices.len() * std::mem::size_of::<egui::epaint::Vertex>()) as isize,
                     vertices.as_ptr().cast(),
-                    GL_STATIC_DRAW,
+                    gl::STATIC_DRAW,
                 );
 
-                glGenBuffers(1, &mut index_buffer);
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer);
-                glBufferData(
-                    GL_ELEMENT_ARRAY_BUFFER,
+                gl::GenBuffers(1, &mut index_buffer);
+                gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, index_buffer);
+                gl::BufferData(
+                    gl::ELEMENT_ARRAY_BUFFER,
                     (indices.len() * std::mem::size_of::<u32>()) as isize,
                     indices.as_ptr().cast(),
-                    GL_STATIC_DRAW,
+                    gl::STATIC_DRAW,
                 );
 
-                glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
+                gl::BindBuffer(gl::ARRAY_BUFFER, vertex_buffer);
 
                 // pos
-                glVertexAttribPointer(
+                gl::VertexAttribPointer(
                     0 as u32,
                     2 as i32,
-                    GL_FLOAT,
+                    gl::FLOAT,
                     0,
                     std::mem::size_of::<egui::epaint::Vertex>() as i32,
                     0 as *const _,
                 );
-                glEnableVertexAttribArray(0 as u32);
+                gl::EnableVertexAttribArray(0 as u32);
 
                 // ui
-                glVertexAttribPointer(
+                gl::VertexAttribPointer(
                     1 as u32,
                     2 as i32,
-                    GL_FLOAT,
+                    gl::FLOAT,
                     0,
                     std::mem::size_of::<egui::epaint::Vertex>() as i32,
                     std::mem::size_of::<egui::epaint::Pos2>() as *const _,
                 );
-                glEnableVertexAttribArray(1 as u32);
+                gl::EnableVertexAttribArray(1 as u32);
 
                 // color
-                glVertexAttribPointer(
+                gl::VertexAttribPointer(
                     2 as u32,
                     4 as i32,
-                    GL_UNSIGNED_BYTE,
+                    gl::UNSIGNED_BYTE,
                     0,
                     std::mem::size_of::<egui::epaint::Vertex>() as i32,
                     (std::mem::size_of::<egui::epaint::Pos2>() * 2) as *const _,
                 );
-                glEnableVertexAttribArray(2 as u32);
+                gl::EnableVertexAttribArray(2 as u32);
 
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer);
+                gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, index_buffer);
 
-                glUseProgram(self.pipeline.id);
+                gl::UseProgram(self.pipeline.id);
                 self.pipeline
                     .set_uniform_vec2("window_size\0", &window_size);
 
                 self.pipeline.set_uniform_1i("u_sampler\0", 0);
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, egui_texture_id);
-                glDrawElements(
-                    GL_TRIANGLES,
+                gl::ActiveTexture(gl::TEXTURE0);
+                gl::BindTexture(gl::TEXTURE_2D, egui_texture_id);
+                gl::DrawElements(
+                    gl::TRIANGLES,
                     indices.len() as i32,
-                    GL_UNSIGNED_INT,
+                    gl::UNSIGNED_INT,
                     0 as *const _,
                 );
 
-                glDeleteBuffers(1, &mut vertex_buffer);
-                glDeleteBuffers(1, &mut index_buffer);
+                gl::DeleteBuffers(1, &mut vertex_buffer);
+                gl::DeleteBuffers(1, &mut index_buffer);
             }
         }
     }
@@ -133,22 +133,21 @@ fn generate_gl_texture_from_egui_texture(egui_texture: &egui::epaint::Texture) -
     }
 
     unsafe {
-        glGenTextures(1, &mut texture_id);
-        glBindTexture(GL_TEXTURE_2D, texture_id);
+        gl::GenTextures(1, &mut texture_id);
+        gl::BindTexture(gl::TEXTURE_2D, texture_id);
 
-        //glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE.0 as i32);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE.0 as i32);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR.0 as i32);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR.0 as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_EDGE as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_EDGE as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
 
-        let format: GLenum = GL_RGBA;
-        let data_size: GLenum = GL_UNSIGNED_BYTE;
+        let format = gl::RGBA;
+        let data_size = gl::UNSIGNED_BYTE;
 
-        glTexImage2D(
-            GL_TEXTURE_2D,
+        gl::TexImage2D(
+            gl::TEXTURE_2D,
             0,
-            format.0 as i32,
+            format as i32,
             egui_texture.width as i32,
             egui_texture.height as i32,
             0,

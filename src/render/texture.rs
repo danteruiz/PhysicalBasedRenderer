@@ -5,7 +5,8 @@
 //
 // Distributed under the MIT Lisense
 // https://mit-license.org/
-use gl33::{gl_core_types::*, gl_enumerations::*, global_loader::*};
+extern crate gl;
+
 use image;
 
 use std::fs;
@@ -17,7 +18,6 @@ const GRAY_COLOR: [u8; 4] = [0x80, 0x80, 0x80, 0xFF];
 const BLACK_COLOR: [u8; 4] = [0x00, 0x00, 0x00, 0xFF];
 
 pub enum Type {
-    Tex1D,
     Tex2D,
 }
 
@@ -45,22 +45,22 @@ impl Texture {
 
         let mut texture_id: u32 = 0;
         unsafe {
-            glGenTextures(1, &mut texture_id);
-            glBindTexture(GL_TEXTURE_2D, texture_id);
+            gl::GenTextures(1, &mut texture_id);
+            gl::BindTexture(gl::TEXTURE_2D, texture_id);
 
-            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE.0 as i32);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE.0 as i32);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR.0 as i32);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR.0 as i32);
+            gl::PixelStorei(gl::UNPACK_ALIGNMENT, 1);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_EDGE as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_EDGE as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
 
-            let format: GLenum = GL_RGB;
-            let texture_size: GLenum = GL_FLOAT;
+            let format = gl::RGB;
+            let texture_size = gl::FLOAT;
 
-            glTexImage2D(
-                GL_TEXTURE_2D,
+            gl::TexImage2D(
+                gl::TEXTURE_2D,
                 0,
-                GL_RGB.0 as i32,
+                gl::RGB as i32,
                 info.width as i32,
                 info.height as i32,
                 0,
@@ -80,23 +80,23 @@ impl Texture {
         let mut texture = Texture::empty();
 
         unsafe {
-            glGenTextures(1, &mut texture.id);
+            gl::GenTextures(1, &mut texture.id);
 
-            glBindTexture(GL_TEXTURE_2D, texture.id);
+            gl::BindTexture(gl::TEXTURE_2D, texture.id);
 
-            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE.0 as i32);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE.0 as i32);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR.0 as i32);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR.0 as i32);
+            gl::PixelStorei(gl::UNPACK_ALIGNMENT, 1);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_EDGE as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_EDGE as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
 
-            let format: GLenum = GL_RGBA;
-            let texture_size: GLenum = GL_UNSIGNED_BYTE;
+            let format = gl::RGBA;
+            let texture_size = gl::UNSIGNED_BYTE;
 
-            glTexImage2D(
-                GL_TEXTURE_2D,
+            gl::TexImage2D(
+                gl::TEXTURE_2D,
                 0,
-                GL_RGB.0 as i32,
+                gl::RGB as i32,
                 1,
                 1,
                 0,

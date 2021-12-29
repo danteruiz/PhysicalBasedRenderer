@@ -9,6 +9,6 @@ void main()
 {
     //vec2 uv = sampleSphericalMap(normalize(TexCoord));
     //FragColor = vec4(texture(cubemap, TexCoord).rgb, 1.0);
-    FragColor = vec4(texture(skybox, TexCoord, 3.0).rgb, 1.0);
+    FragColor = vec4(texture(skybox, TexCoord).rgb, 1.0);
     //FragColor = vec4(TexCoord, 1.0);
 }

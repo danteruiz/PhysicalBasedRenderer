@@ -9,5 +9,6 @@
 pub mod buffer;
 pub mod egui_painter;
 pub mod shader;
+pub mod skybox;
 pub mod texture;
 pub use buffer::Buffer;

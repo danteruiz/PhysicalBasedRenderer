@@ -15,7 +15,10 @@ mod math;
 mod render;
 
 use glfw::Context;
-use render::egui_painter;
+
+use std::sync::mpsc::Receiver;
+
+//use std::sync::mpsc::Receiver;
 
 //use crate::render::texture;
 #[allow(dead_code)]
@@ -568,66 +571,68 @@ fn enable_texture(slot: u32, texture_id: u32) {
     }
 }
 
-// fn main() {
-//     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
-//
-//     glfw.window_hint(glfw::WindowHint::ContextVersion(4, 6));
-//     glfw.window_hint(glfw::WindowHint::OpenGlProfile(
-//         glfw::OpenGlProfileHint::Core,
-//     ));
-//
-//     let (mut window, events) = glfw
-//         .create_window(
-//             400,
-//             400,
-//             "Physical based rendering",
-//             glfw::WindowMode::Windowed,
-//         )
-//         .expect("Failed to create GLFW window");
-//
-//     window.make_current();
-//     window.set_key_polling(true);
-//
-//     gl::load_with(|symbol| window.get_proc_address(symbol) as *const _);
-//
-//     while !window.should_close() {
-//         window.swap_buffers();
-//
-//         glfw.poll_events();
-//
-//         for (_, event) in glfw::flush_messages(&events) {
-//             println!("{:?}", event);
-//             match event {
-//                 glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
-//                     window.set_should_close(true)
-//                 }
-//                 _ => {}
-//             }
-//         }
-//
-//         unsafe {
-//             gl::ClearColor(0.2, 1.0, 0.2, 1.0);
-//             gl::Clear(gl::COLOR_BUFFER_BIT);
-//         }
-//     }
-// }
+fn process_events(
+    glfw: &mut glfw::Glfw,
+    window: &mut glfw::Window,
+    events: &Receiver<(f64, glfw::WindowEvent)>,
+) -> egui::RawInput {
+    glfw.poll_events();
+    let mut raw_input = egui::RawInput::default();
+
+    let mouse_position = window.get_cursor_pos();
+    let mouse_primary_action = window.get_mouse_button(glfw::MouseButtonLeft);
+
+    let is_mouse_button_pressed: bool = match mouse_primary_action {
+        glfw::Action::Release => false,
+        glfw::Action::Press => true,
+        glfw::Action::Repeat => true,
+    };
+
+    let egui_position = egui::Pos2 {
+        x: mouse_position.0 as f32,
+        y: mouse_position.1 as f32,
+    };
+
+    let egui_modifiers = egui::Modifiers {
+        alt: false,
+        ctrl: false,
+        shift: false,
+        mac_cmd: false,
+        command: false,
+    };
+
+    let egui_mouse_pointer_action = egui::Event::PointerButton {
+        pos: egui_position,
+        button: egui::PointerButton::Primary,
+        pressed: is_mouse_button_pressed,
+        modifiers: egui_modifiers,
+    };
+
+    for (_, event) in glfw::flush_messages(&events) {
+        match event {
+            glfw::WindowEvent::Key(glfw::Key::Escape, _, glfw::Action::Press, _) => {
+                window.set_should_close(true)
+            }
+            _ => {}
+        }
+    }
+
+    raw_input.modifiers = egui_modifiers;
+    raw_input.events.push(egui_mouse_pointer_action);
+    raw_input
+}
 
 fn main() {
     let mut egui_context = egui::CtxRef::default();
 
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
-    glfw.window_hint(glfw::WindowHint::ContextVersion(4, 6));
+    glfw.window_hint(glfw::WindowHint::ContextVersion(3, 2));
     glfw.window_hint(glfw::WindowHint::OpenGlProfile(
         glfw::OpenGlProfileHint::Core,
     ));
 
     let (mut window, events) = glfw
-        .create_window(
-            400,
-            400,
-            "Physical based rendering",
-            glfw::WindowMode::Windowed,
-        )
+        .create_window(700, 700, WINDOW_TITLE, glfw::WindowMode::Windowed)
         .expect("Failed to create GLFW window");
 
     window.make_current();
@@ -647,45 +652,42 @@ fn main() {
     let fragment_shader_file: &'static str = "resources/shaders/pbr.fs";
     let vertex_shader_file: &'static str = "resources/shaders/pbr.vs";
 
-    //let pipeline = render::shader::Pipeline::new(vertex_shader_file, fragment_shader_file).unwrap();
-    //let skybox_pipeline =
-    // render::shader::Pipeline::new("resources/shaders/skybox.vs", "resources/shaders/skybox.fs")
-    //     .unwrap();
+    let pipeline = render::shader::Pipeline::new(vertex_shader_file, fragment_shader_file).unwrap();
+    let skybox_pipeline =
+        render::shader::Pipeline::new("resources/shaders/skybox.vs", "resources/shaders/skybox.fs")
+            .unwrap();
     let target_position = math::Point3::new(0.0, 0.0, 0.0);
     let view = math::shared::look_at(&EYE_POSITION, &target_position, &math::shared::UNIT_Y);
 
-    let mut raw_input: egui::RawInput = egui::RawInput::default();
-    let mut last_mouse_pos = egui::Pos2::new(0.0 as f32, 0.0 as f32);
-    let mut last_modifier = egui::Modifiers {
-        alt: false,
-        ctrl: false,
-        shift: false,
-        mac_cmd: false,
-        command: false,
-    };
+    let ibl_textures = generate_ibl_environment("resources/images/IBL/PaperMill/PaperMill.hdr");
 
-    //let ibl_textures = generate_ibl_environment("resources/images/IBL/PaperMill/PaperMill.hdr");
-
-    //let texture_cache = render::texture::TextureCache::new();
+    let texture_cache = render::texture::TextureCache::new();
     let _egui_painter = render::egui_painter::EguiPainter::new();
     egui_context.set_visuals(egui::Visuals::light());
 
     while !window.should_close() {
         // process input
+        let raw_input = process_events(&mut glfw, &mut window, &events);
 
-        glfw.poll_events();
-
-        for (_, event) in glfw::flush_messages(&events) {
-            println!("{:?}", event);
-            match event {
-                glfw::WindowEvent::Key(glfw::Key::Escape, _, glfw::Action::Press, _) => {
-                    window.set_should_close(true)
-                }
-                _ => {}
+        egui_context.begin_frame(raw_input);
+        egui::Window::new("").show(&egui_context, |ui| {
+            ui.label("Lighting");
+            ui.separator();
+            unsafe {
+                ui.add(egui::Slider::new(&mut LIGHT.position.x, -20.0..=20.0).text(": x"));
+                ui.add(egui::Slider::new(&mut LIGHT.position.y, -20.0..=20.0).text(": y"));
+                ui.add(egui::Slider::new(&mut LIGHT.position.z, -20.0..=20.0).text(": z"));
             }
-        }
-        // draw stuff
 
+            ui.label("Material");
+            ui.separator();
+
+            unsafe {
+                ui.add(egui::Slider::new(&mut MATERIAL.roughness, 0.001..=1.0).text("roughness"));
+                ui.add(egui::Slider::new(&mut MATERIAL.metallic, 0.001..=1.0).text("metallic"));
+                //ui.add(egui::Slider::new(&mut LIGHT.position.z, 0.001..=1.0));
+            }
+        });
         unsafe {
             gl::Enable(gl::BLEND);
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
@@ -695,133 +697,43 @@ fn main() {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
             gl::ClearColor(0.0, 0.0, 0.0, 1.0);
 
+            let window_size = window.get_size();
+            let window_width = window_size.0;
+            let window_height = window_size.1;
+            let angle: f32 = 90.0;
+            let projection = math::shared::perspective(
+                angle.to_radians(),
+                (window_width as f32 / window_height as f32) as f32,
+                0.3,
+                700.0,
+            );
+
+            gl::Viewport(0, 0, window_width as i32, window_height as i32);
+
+            render_skybox(
+                &cube_model,
+                projection,
+                view,
+                &skybox_pipeline,
+                &ibl_textures.0,
+            );
+            render_model(&sphere_model, projection, view, &pipeline, &texture_cache);
+
+            let (_, shapes) = egui_context.end_frame();
+            let clipped_meshes = egui_context.tessellate(shapes);
+
+            _egui_painter.paint(
+                &clipped_meshes,
+                &egui_context.texture(),
+                &math::Vec2::new(window_size.0 as f32, window_size.1 as f32),
+            );
+
             window.swap_buffers();
         }
     }
-    // event_loop.run(move |event, _, control_flow| {
-    //     *control_flow = ControlFlow::Poll;
-    //     match event {
-    //         Event::WindowEvent { event, .. } => match event {
-    //             WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
-    //             WindowEvent::CursorMoved {
-    //                 device_id: _,
-    //                 position,
-    //                 ..
-    //             } => {
-    //                 let pos2: egui::Pos2 = egui::Pos2::new(position.x as f32, position.y as f32);
-    //                 last_mouse_pos = pos2.clone();
-    //                 raw_input.events.push(egui::Event::PointerMoved(pos2));
-    //             }
-    //             WindowEvent::ModifiersChanged(modifier_state) => {
-    //                 last_modifier = egui::Modifiers {
-    //                     alt: modifier_state.alt(),
-    //                     ctrl: modifier_state.ctrl(),
-    //                     shift: modifier_state.shift(),
-    //                     mac_cmd: false,
-    //                     command: false,
-    //                 }
-    //             }
-    //             WindowEvent::MouseInput {
-    //                 device_id: _,
-    //                 state,
-    //                 button,
-    //                 ..
-    //             } => {
-    //                 let button_pressed: bool = match state {
-    //                     ElementState::Pressed => true,
-    //                     ElementState::Released => false,
-    //                 };
-    //
-    //                 let mouse_button: egui::PointerButton = match button {
-    //                     glutin::event::MouseButton::Left => egui::PointerButton::Primary,
-    //                     glutin::event::MouseButton::Right => egui::PointerButton::Secondary,
-    //                     glutin::event::MouseButton::Middle => egui::PointerButton::Middle,
-    //                     _ => egui::PointerButton::Primary,
-    //                 };
-    //
-    //                 raw_input.events.push(egui::Event::PointerButton {
-    //                     pos: Clone::clone(&last_mouse_pos),
-    //                     button: mouse_button,
-    //                     pressed: button_pressed,
-    //                     modifiers: last_modifier,
-    //                 });
-    //             }
-    //             _ => (),
-    //         },
-    //         Event::MainEventsCleared => {
-    //             let final_input = raw_input.clone();
-    //             egui_context.begin_frame(final_input);
-    //             egui::Window::new("").show(&egui_context, |ui| {
-    //                 ui.label("Lighting");
-    //                 ui.separator();
-    //                 unsafe {
-    //                     ui.add(egui::Slider::new(&mut LIGHT.position.x, -20.0..=20.0).text(": x"));
-    //                     ui.add(egui::Slider::new(&mut LIGHT.position.y, -20.0..=20.0).text(": y"));
-    //                     ui.add(egui::Slider::new(&mut LIGHT.position.z, -20.0..=20.0).text(": z"));
-    //                 }
-    //
-    //                 ui.label("Material");
-    //                 ui.separator();
-    //
-    //                 unsafe {
-    //                     ui.add(
-    //                         egui::Slider::new(&mut MATERIAL.roughness, 0.001..=1.0)
-    //                             .text("roughness"),
-    //                     );
-    //                     ui.add(
-    //                         egui::Slider::new(&mut MATERIAL.metallic, 0.001..=1.0).text("metallic"),
-    //                     );
-    //                     //ui.add(egui::Slider::new(&mut LIGHT.position.z, 0.001..=1.0));
-    //                 }
-    //             });
-    //
-    //             unsafe {
-    //                 gl::Enable(gl::BLEND);
-    //                 gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
-    //                 gl::Enable(gl::DEPTH_TEST);
-    //                 gl::Enable(gl::PROGRAM_POINT_SIZE);
-    //                 gl::Enable(gl::LINE_SMOOTH);
-    //                 gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-    //                 gl::ClearColor(0.0, 0.0, 0.0, 1.0);
-    //             }
-    //             let inner_size = window.inner_size();
-    //             let angle: f32 = 90.0;
-    //             let projection = math::shared::perspective(
-    //                 angle.to_radians(),
-    //                 (inner_size.width as f32 / inner_size.height as f32) as f32,
-    //                 0.3,
-    //                 700.0,
-    //             );
-    //
-    //             unsafe {
-    //                 gl::Viewport(0, 0, inner_size.width as i32, inner_size.height as i32);
-    //             }
-    //             render_skybox(
-    //                 &cube_model,
-    //                 projection,
-    //                 view,
-    //                 &skybox_pipeline,
-    //                 &ibl_textures.0,
-    //             );
-    //             render_model(&sphere_model, projection, view, &pipeline, &texture_cache);
-    //
-    //             let (_, shapes) = egui_context.end_frame();
-    //             let clipped_meshes = egui_context.tessellate(shapes);
-    //
-    //             let window_size =
-    //                 math::Vec2::new(inner_size.width as f32, inner_size.height as f32);
-    //             _egui_painter.paint(&clipped_meshes, &egui_context.texture(), &window_size);
-    //
-    //             //let _ = context.swap_buffers();
-    //             window.swap_buffers();
-    //             raw_input = egui::RawInput::default()
-    //         }
-    //         _ => (),
-    //     }
-    // });
 }
 
-static SKYBOX_RESOLUTION: i32 = 4096;
+static SKYBOX_RESOLUTION: i32 = 1080;
 fn generate_skybox_texture(texture: render::texture::Texture) -> render::texture::Texture {
     let mut frame_buffer: u32 = 0;
     let mut skybox_texture: u32 = 0;
@@ -834,7 +746,7 @@ fn generate_skybox_texture(texture: render::texture::Texture) -> render::texture
         gl::BindTexture(gl::TEXTURE_CUBE_MAP, skybox_texture);
 
         for index in 0..6 {
-            let texture_target = gl::TEXTURE_CUBE_MAP_POSITIVE_X + index as u32;
+            let texture_target = gl::TEXTURE_CUBE_MAP_POSITIVE_X + index;
             gl::TexImage2D(
                 texture_target,
                 0,
@@ -980,13 +892,7 @@ fn generate_skybox_texture(texture: render::texture::Texture) -> render::texture
     }
 }
 
-fn generate_ibl_environment(
-    image_path: &'static str,
-) -> (
-    render::texture::Texture,
-    render::texture::Texture,
-    render::texture::Texture,
-) {
+fn generate_ibl_environment(image_path: &'static str) -> render::skybox::Skybox {
     let quad_model: Model = generate_quad_model();
 
     let hdr_texture = render::texture::Texture::new(image_path);
@@ -996,6 +902,11 @@ fn generate_ibl_environment(
     };
 
     let mut prefilter_texture = render::texture::Texture {
+        id: 0,
+        tex_type: render::texture::Type::Tex2D,
+    };
+
+    let mut brdf_texture = render::texture::Texture {
         id: 0,
         tex_type: render::texture::Type::Tex2D,
     };
@@ -1261,7 +1172,38 @@ fn generate_ibl_environment(
             }
             gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
         }
+
+        gl::GenTextures(gl::TEXTURE_2D, &mut brdf_texture.id);
+        gl::BindTexure(gl::TEXTURE_2D, brdf_texture.id);
+
+        gl::TexImage2D(
+            gl::TEXTURE_2D,
+            0,
+            gl::RGB16F as i32,
+            1080,
+            1080,
+            0,
+            gl::RG,
+            gl::FLOAT,
+            std::ptr::null(),
+        );
+
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_EDGE as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_EDGE as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_R, gl::CLAMP_TO_EDGE as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
+
+        gl::BindFramebuffer(gl::FRAMEBUFFER, capture_fbo);
+        gl::BindRenderbuffer(gl::RENDERBUFFER, capture_rbo);
+
+        gl::RenderbufferStorage(gl::RENDERBUFFER, gl::DEPTH_COMPONENT24, 512, 512);
     }
 
-    (skybox_texture, irradiance_texture, prefilter_texture)
+    render::skybox::Skybox {
+        skybox: skybox_texture,
+        irradiance: irradiance_texture,
+        prefilter: prefilter_texture,
+        brdf: brdf_texture,
+    }
 }
