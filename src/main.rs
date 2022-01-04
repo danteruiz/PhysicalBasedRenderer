@@ -242,6 +242,7 @@ fn generate_cube_model() -> Model {
         16, 17, 18, 16, 18, 19, // front
         20, 21, 22, 20, 22, 23, // back
     ];
+
     let position_attribute: Attribute = Attribute {
         format: Format {
             dimension: Dimension::Vec3,
@@ -503,6 +504,7 @@ fn render_model(
     view: math::Mat4,
     pipeline: &render::shader::Pipeline,
     texture_cache: &render::texture::TextureCache,
+    skybox: &render::skybox::Skybox,
 ) {
     for mesh in &model.meshes {
         let model_matrix = math::Mat4::identity();
@@ -546,10 +548,16 @@ fn render_model(
                 pipeline.set_uniform_1i("u_albedoMap\0", 0);
                 pipeline.set_uniform_1i("u_normalMap\0", 1);
                 pipeline.set_uniform_1i("u_metallicMap\0", 2);
+                pipeline.set_uniform_1i("u_brdfMap\0", 3);
+                pipeline.set_uniform_1i("u_irradianceMap\0", 4);
+                pipeline.set_uniform_1i("u_prefilterMap\0", 5);
 
                 enable_texture(0, texture_cache.white_texture.id);
-                enable_texture(1, texture_cache.blue_texture.id);
+                //enable_texture(1, texture_cache.blue_texture.id);
                 enable_texture(2, texture_cache.gray_texture.id);
+                enable_texture(3, skybox.brdf.id);
+                enable_texture(4, skybox.irradiance.id);
+                enable_texture(5, skybox.prefilter.id);
 
                 let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
                 gl::DrawElements(
@@ -626,7 +634,7 @@ fn main() {
     let mut egui_context = egui::CtxRef::default();
 
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
-    glfw.window_hint(glfw::WindowHint::ContextVersion(3, 2));
+    glfw.window_hint(glfw::WindowHint::ContextVersion(4, 6));
     glfw.window_hint(glfw::WindowHint::OpenGlProfile(
         glfw::OpenGlProfileHint::Core,
     ));
@@ -659,12 +667,11 @@ fn main() {
     let target_position = math::Point3::new(0.0, 0.0, 0.0);
     let view = math::shared::look_at(&EYE_POSITION, &target_position, &math::shared::UNIT_Y);
 
-    let ibl_textures = generate_ibl_environment("resources/images/IBL/PaperMill/PaperMill.hdr");
-
     let texture_cache = render::texture::TextureCache::new();
     let _egui_painter = render::egui_painter::EguiPainter::new();
     egui_context.set_visuals(egui::Visuals::light());
 
+    let ibl_textures = generate_ibl_environment("resources/images/IBL/PaperMill/PaperMill.hdr");
     while !window.should_close() {
         // process input
         let raw_input = process_events(&mut glfw, &mut window, &events);
@@ -715,9 +722,16 @@ fn main() {
                 projection,
                 view,
                 &skybox_pipeline,
-                &ibl_textures.0,
+                &ibl_textures.skybox,
             );
-            render_model(&sphere_model, projection, view, &pipeline, &texture_cache);
+            render_model(
+                &sphere_model,
+                projection,
+                view,
+                &pipeline,
+                &texture_cache,
+                &ibl_textures,
+            );
 
             let (_, shapes) = egui_context.end_frame();
             let clipped_meshes = egui_context.tessellate(shapes);
@@ -1173,8 +1187,9 @@ fn generate_ibl_environment(image_path: &'static str) -> render::skybox::Skybox 
             gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
         }
 
-        gl::GenTextures(gl::TEXTURE_2D, &mut brdf_texture.id);
-        gl::BindTexure(gl::TEXTURE_2D, brdf_texture.id);
+        // BRDF
+        gl::GenTextures(1, &mut brdf_texture.id);
+        gl::BindTexture(gl::TEXTURE_2D, brdf_texture.id);
 
         gl::TexImage2D(
             gl::TEXTURE_2D,
@@ -1198,6 +1213,47 @@ fn generate_ibl_environment(image_path: &'static str) -> render::skybox::Skybox 
         gl::BindRenderbuffer(gl::RENDERBUFFER, capture_rbo);
 
         gl::RenderbufferStorage(gl::RENDERBUFFER, gl::DEPTH_COMPONENT24, 512, 512);
+        gl::FramebufferTexture2D(
+            gl::FRAMEBUFFER,
+            gl::COLOR_ATTACHMENT0,
+            gl::TEXTURE_2D,
+            brdf_texture.id,
+            0,
+        );
+        gl::Viewport(0, 0, 1080, 1080);
+        gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+
+        let brdf_pipeline =
+            render::shader::Pipeline::new("resources/shaders/brdf.vs", "resources/shaders/brdf.fs")
+                .unwrap();
+
+        gl::UseProgram(brdf_pipeline.id);
+        let mesh: &Mesh = &quad_model.meshes[0];
+        let sub_mesh: &SubMesh = &mesh.sub_meshes[0];
+
+        gl::BindBuffer(gl::ARRAY_BUFFER, mesh.gl_buffer_id);
+
+        for attribute in &mesh.attributes {
+            let format: &Format = &attribute.format;
+            gl::VertexAttribPointer(
+                attribute.slot as u32,
+                format.get_dimension_size() as i32,
+                gl::FLOAT,
+                0,
+                format.get_stride() as i32,
+                attribute.get_total_offset() as *const _,
+            );
+            gl::EnableVertexAttribArray(attribute.slot as u32);
+        }
+
+        let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
+        gl::DrawElements(
+            gl::TRIANGLES,
+            sub_mesh.num_indices as i32,
+            gl::UNSIGNED_INT,
+            start_index as *const _,
+        );
+        gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
     }
 
     render::skybox::Skybox {
