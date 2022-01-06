@@ -45,14 +45,14 @@ void main() {
     vec3 L = normalize(light.position - vertex_position);
     vec3 V = normalize(camera_position - vertex_position);
     vec3 H = normalize(V + L);
-    vec3 N = vertex_normal;
+    vec3 N = normalize(vertex_normal);
     vec3 reflection = -reflect(V, N);
 
     vec2 a_textCoord = vec2(0.0, 0.0);
 
     float NdotL = clamp(dot(N, L), 0.01, 1.0);
     float NdotH = clamp(dot(N, H), 0.01, 1.0);
-    float NdotV = abs(dot(N, V));
+    float NdotV = clamp(abs(dot(N, V)), 0.001, 1.0);
     float LdotH = clamp(dot(L, H), 0.0, 1.0);
     float VdotH = clamp(dot(V, H), 0.0, 1.0);
 
@@ -68,6 +68,7 @@ void main() {
     pbrInfo.metallic *= mrSample.b;
 
     pbrInfo.albedoColor = pbrInfo.baseColor * (vec3(1.0) - f0);
+    f0 = mix(f0, pbrInfo.baseColor.rgb, pbrInfo.metallic);
     pbrInfo.albedoColor *= 1.0 - pbrInfo.metallic;
     float reflectance = max(max(f0.r, f0.g), f0.b);
     pbrInfo.f90 = vec3(clamp(reflectance * 50.0, 0.0, 1.0));

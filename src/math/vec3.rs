@@ -66,6 +66,12 @@ impl From<Vec4> for Vec3 {
     }
 }
 
+impl From<[f32; 3]> for Vec3 {
+    fn from(data: [f32; 3]) -> Vec3 {
+        Vec3::new(data[0], data[1], data[2])
+    }
+}
+
 impl Cross for Vec3 {
     type Output = Self;
     fn cross(&self, v2: &Self) -> Vec3 {

@@ -13,6 +13,11 @@ vec3 F_Schlick2(float VdotH, vec3 F0)
     return F0 + (vec3(1.0) - F0) * pow(1.0 - VdotH, 5.0);
 }
 
+vec3 F_Schlick(float VdotH, vec3 F0, vec3 F90)
+{
+    return F0 + (F90 - F0) * pow(1.0 - VdotH, 5.0);
+}
+
 float ShlickGGX(float NdotV, float roughness)
 {
     float r = roughness + 1;

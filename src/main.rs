@@ -85,7 +85,7 @@ impl Format {
 enum Slot {
     Position = 0,
     Normal,
-    // TexCoord,
+    TexCoord,
     // Color,
 }
 
@@ -169,7 +169,7 @@ fn generate_quad_model() -> Model {
             dimension: Dimension::Vec2,
             m_type: Type::Float,
         },
-        slot: Slot::Normal,
+        slot: Slot::TexCoord,
         offset: positions.len() + normals.len(),
     };
 
@@ -437,8 +437,8 @@ static mut LIGHT: Light = Light {
 static mut MATERIAL: Material = Material {
     color: math::Vec3 {
         x: 1.0,
-        y: 0.2,
-        z: 0.4,
+        y: 1.0,
+        z: 1.0,
     },
     roughness: 1.0,
     metallic: 1.0,
@@ -556,8 +556,8 @@ fn render_model(
                 //enable_texture(1, texture_cache.blue_texture.id);
                 enable_texture(2, texture_cache.gray_texture.id);
                 enable_texture(3, skybox.brdf.id);
-                enable_texture(4, skybox.irradiance.id);
-                enable_texture(5, skybox.prefilter.id);
+                enable_cube_texture(4, skybox.irradiance.id);
+                enable_cube_texture(5, skybox.prefilter.id);
 
                 let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
                 gl::DrawElements(
@@ -571,6 +571,13 @@ fn render_model(
     }
 }
 
+fn enable_cube_texture(slot: u32, texture_id: u32) {
+    let texture_slot = gl::TEXTURE0 + slot;
+    unsafe {
+        gl::ActiveTexture(texture_slot);
+        gl::BindTexture(gl::TEXTURE_CUBE_MAP, texture_id);
+    }
+}
 fn enable_texture(slot: u32, texture_id: u32) {
     let texture_slot = gl::TEXTURE0 + slot;
     unsafe {
@@ -694,6 +701,16 @@ fn main() {
                 ui.add(egui::Slider::new(&mut MATERIAL.metallic, 0.001..=1.0).text("metallic"));
                 //ui.add(egui::Slider::new(&mut LIGHT.position.z, 0.001..=1.0));
             }
+
+            ui.label("color");
+            ui.separator();
+
+            unsafe {
+                let mut color: [f32; 3] = [MATERIAL.color.x, MATERIAL.color.y, MATERIAL.color.z];
+                ui.color_edit_button_rgb(&mut color);
+
+                MATERIAL.color = math::Vec3::from(color);
+            }
         });
         unsafe {
             gl::Enable(gl::BLEND);
@@ -701,6 +718,7 @@ fn main() {
             gl::Enable(gl::DEPTH_TEST);
             gl::Enable(gl::PROGRAM_POINT_SIZE);
             gl::Enable(gl::LINE_SMOOTH);
+
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
             gl::ClearColor(0.0, 0.0, 0.0, 1.0);
 
@@ -908,6 +926,7 @@ fn generate_skybox_texture(texture: render::texture::Texture) -> render::texture
 
 fn generate_ibl_environment(image_path: &'static str) -> render::skybox::Skybox {
     let quad_model: Model = generate_quad_model();
+    let cube_model = generate_cube_model();
 
     let hdr_texture = render::texture::Texture::new(image_path);
     let mut irradiance_texture = render::texture::Texture {
@@ -945,7 +964,7 @@ fn generate_ibl_environment(image_path: &'static str) -> render::skybox::Skybox 
             math::shared::look_at(
                 &math::Point3::new(0.0, 0.0, 0.0),
                 &math::Point3::new(1.0, 0.0, 0.0),
-                &math::Vec3::new(0.0, 1.0, 0.0),
+                &math::Vec3::new(0.0, -1.0, 0.0),
             ),
             math::shared::look_at(
                 &math::Point3::new(0.0, 0.0, 0.0),
@@ -974,208 +993,107 @@ fn generate_ibl_environment(image_path: &'static str) -> render::skybox::Skybox 
             ),
         ];
 
-        gl::BindTexture(gl::TEXTURE_CUBE_MAP, skybox_texture.id);
-        gl::GenerateMipmap(gl::TEXTURE_CUBE_MAP);
+        // irradiance map
+        {
+            gl::BindTexture(gl::TEXTURE_CUBE_MAP, skybox_texture.id);
+            gl::GenerateMipmap(gl::TEXTURE_CUBE_MAP);
 
-        gl::GenTextures(1, &mut irradiance_texture.id);
-        gl::BindTexture(gl::TEXTURE_CUBE_MAP, irradiance_texture.id);
-        for index in 0..5 {
-            let texture_target = gl::TEXTURE_CUBE_MAP_POSITIVE_X + index as u32;
-            gl::TexImage2D(
-                texture_target,
-                0,
-                gl::RGB16F as i32,
-                32,
-                32,
-                0,
-                gl::RGB,
-                gl::FLOAT,
-                std::ptr::null(),
+            gl::GenTextures(1, &mut irradiance_texture.id);
+            gl::BindTexture(gl::TEXTURE_CUBE_MAP, irradiance_texture.id);
+            for index in 0..6 {
+                let texture_target = gl::TEXTURE_CUBE_MAP_POSITIVE_X + index as u32;
+                gl::TexImage2D(
+                    texture_target,
+                    0,
+                    gl::RGB16F as i32,
+                    32,
+                    32,
+                    0,
+                    gl::RGB,
+                    gl::FLOAT,
+                    std::ptr::null(),
+                );
+            }
+
+            gl::TexParameteri(
+                gl::TEXTURE_CUBE_MAP,
+                gl::TEXTURE_WRAP_S,
+                gl::CLAMP_TO_EDGE as i32,
             );
-        }
-
-        gl::TexParameteri(
-            gl::TEXTURE_CUBE_MAP,
-            gl::TEXTURE_WRAP_S,
-            gl::CLAMP_TO_EDGE as i32,
-        );
-        gl::TexParameteri(
-            gl::TEXTURE_CUBE_MAP,
-            gl::TEXTURE_WRAP_T,
-            gl::CLAMP_TO_EDGE as i32,
-        );
-        gl::TexParameteri(
-            gl::TEXTURE_CUBE_MAP,
-            gl::TEXTURE_WRAP_R,
-            gl::CLAMP_TO_EDGE as i32,
-        );
-        gl::TexParameteri(
-            gl::TEXTURE_CUBE_MAP,
-            gl::TEXTURE_MIN_FILTER,
-            gl::LINEAR as i32,
-        );
-        gl::TexParameteri(
-            gl::TEXTURE_CUBE_MAP,
-            gl::TEXTURE_MAG_FILTER,
-            gl::LINEAR as i32,
-        );
-
-        gl::BindFramebuffer(gl::FRAMEBUFFER, capture_fbo);
-        gl::BindRenderbuffer(gl::RENDERBUFFER, capture_rbo);
-        gl::RenderbufferStorage(gl::RENDERBUFFER, gl::DEPTH_COMPONENT24, 32, 32);
-
-        let irrandiance_pipeline = render::shader::Pipeline::new(
-            "resources/shaders/skybox.vs",
-            "resources/shaders/irradianceConvolution.fs",
-        )
-        .unwrap();
-
-        gl::UseProgram(irrandiance_pipeline.id);
-
-        irrandiance_pipeline.set_uniform_1i("envMap\0", 0);
-        irrandiance_pipeline.set_uniform_mat4("projection\0", &capture_projection);
-
-        gl::ActiveTexture(gl::TEXTURE0);
-        gl::BindTexture(gl::TEXTURE_CUBE_MAP, skybox_texture.id);
-
-        gl::Viewport(0, 0, 32, 32);
-        gl::BindFramebuffer(gl::FRAMEBUFFER, capture_fbo);
-
-        let mesh: &Mesh = &quad_model.meshes[0];
-        let sub_mesh: &SubMesh = &mesh.sub_meshes[0];
-
-        gl::BindBuffer(gl::ARRAY_BUFFER, mesh.gl_buffer_id);
-
-        for attribute in &mesh.attributes {
-            let format: &Format = &attribute.format;
-            gl::VertexAttribPointer(
-                attribute.slot as u32,
-                format.get_dimension_size() as i32,
-                gl::FLOAT,
-                0,
-                format.get_stride() as i32,
-                attribute.get_total_offset() as *const _,
+            gl::TexParameteri(
+                gl::TEXTURE_CUBE_MAP,
+                gl::TEXTURE_WRAP_T,
+                gl::CLAMP_TO_EDGE as i32,
             );
-            gl::EnableVertexAttribArray(attribute.slot as u32);
-        }
-        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, mesh.gl_index_id);
-
-        for index in 0..5 {
-            irrandiance_pipeline.set_uniform_mat4("view\0", &capture_views[index]);
-            let texture_target = gl::TEXTURE_CUBE_MAP_POSITIVE_X + index as u32;
-
-            gl::FramebufferTexture2D(
-                gl::FRAMEBUFFER,
-                gl::COLOR_ATTACHMENT0,
-                texture_target,
-                irradiance_texture.id,
-                0,
+            gl::TexParameteri(
+                gl::TEXTURE_CUBE_MAP,
+                gl::TEXTURE_WRAP_R,
+                gl::CLAMP_TO_EDGE as i32,
+            );
+            gl::TexParameteri(
+                gl::TEXTURE_CUBE_MAP,
+                gl::TEXTURE_MIN_FILTER,
+                gl::LINEAR as i32,
+            );
+            gl::TexParameteri(
+                gl::TEXTURE_CUBE_MAP,
+                gl::TEXTURE_MAG_FILTER,
+                gl::LINEAR as i32,
             );
 
-            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-            let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
-            gl::DrawElements(
-                gl::TRIANGLES,
-                sub_mesh.num_indices as i32,
-                gl::UNSIGNED_INT,
-                start_index as *const _,
-            );
-        }
-
-        gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
-
-        gl::GenTextures(1, &mut prefilter_texture.id);
-        gl::BindTexture(gl::TEXTURE_CUBE_MAP, prefilter_texture.id);
-
-        for index in 0..5 {
-            let texture_target = gl::TEXTURE_CUBE_MAP_POSITIVE_X + index;
-            gl::TexImage2D(
-                texture_target,
-                0,
-                gl::RGB16F as i32,
-                128,
-                128,
-                0,
-                gl::RGB,
-                gl::FLOAT,
-                std::ptr::null(),
-            );
-        }
-
-        gl::TexParameteri(
-            gl::TEXTURE_CUBE_MAP,
-            gl::TEXTURE_WRAP_S,
-            gl::CLAMP_TO_EDGE as i32,
-        );
-        gl::TexParameteri(
-            gl::TEXTURE_CUBE_MAP,
-            gl::TEXTURE_WRAP_T,
-            gl::CLAMP_TO_EDGE as i32,
-        );
-        gl::TexParameteri(
-            gl::TEXTURE_CUBE_MAP,
-            gl::TEXTURE_WRAP_R,
-            gl::CLAMP_TO_EDGE as i32,
-        );
-        gl::TexParameteri(
-            gl::TEXTURE_CUBE_MAP,
-            gl::TEXTURE_MIN_FILTER,
-            gl::LINEAR as i32,
-        );
-        gl::TexParameteri(
-            gl::TEXTURE_CUBE_MAP,
-            gl::TEXTURE_MAG_FILTER,
-            gl::LINEAR as i32,
-        );
-
-        gl::GenerateMipmap(gl::TEXTURE_CUBE_MAP);
-
-        let prefiler_pipeline = render::shader::Pipeline::new(
-            "resources/shaders/skybox.vs",
-            "resources/shaders/prefilterMap.fs",
-        )
-        .unwrap();
-
-        gl::UseProgram(prefiler_pipeline.id);
-        prefiler_pipeline.set_uniform_mat4("projection\0", &capture_projection);
-
-        gl::ActiveTexture(gl::TEXTURE0);
-        gl::BindTexture(gl::TEXTURE_CUBE_MAP, skybox_texture.id);
-        gl::BindFramebuffer(gl::FRAMEBUFFER, capture_fbo);
-
-        let max_mip_levels = 5;
-
-        for mip in 0..max_mip_levels {
-            let pow = 0.5f64.powf(max_mip_levels as f64);
-            let mip_width: u32 = (128.0 * pow) as u32;
-            let mip_height: u32 = (128.0 * pow) as u32;
-
+            gl::BindFramebuffer(gl::FRAMEBUFFER, capture_fbo);
             gl::BindRenderbuffer(gl::RENDERBUFFER, capture_rbo);
-            gl::RenderbufferStorage(
-                gl::RENDERBUFFER,
-                gl::DEPTH_COMPONENT24,
-                mip_width as i32,
-                mip_height as i32,
-            );
+            gl::RenderbufferStorage(gl::RENDERBUFFER, gl::DEPTH_COMPONENT24, 32, 32);
 
-            gl::Viewport(0, 0, mip_width as i32, mip_height as i32);
+            let irrandiance_pipeline = render::shader::Pipeline::new(
+                "resources/shaders/skybox.vs",
+                "resources/shaders/irradianceConvolution.fs",
+            )
+            .unwrap();
 
-            let roughness = mip as f32 / (max_mip_levels - 1) as f32;
-            prefiler_pipeline.set_uniform_1f("roughness\0", roughness);
+            gl::UseProgram(irrandiance_pipeline.id);
+
+            irrandiance_pipeline.set_uniform_1i("envMap\0", 0);
+            irrandiance_pipeline.set_uniform_mat4("projection\0", &capture_projection);
+
+            gl::ActiveTexture(gl::TEXTURE0);
+            gl::BindTexture(gl::TEXTURE_CUBE_MAP, skybox_texture.id);
+
+            gl::Viewport(0, 0, 32, 32);
+            gl::BindFramebuffer(gl::FRAMEBUFFER, capture_fbo);
+
+            let mesh: &Mesh = &cube_model.meshes[0];
+            let sub_mesh: &SubMesh = &mesh.sub_meshes[0];
+
+            gl::BindBuffer(gl::ARRAY_BUFFER, mesh.gl_buffer_id);
+
+            for attribute in &mesh.attributes {
+                let format: &Format = &attribute.format;
+                gl::VertexAttribPointer(
+                    attribute.slot as u32,
+                    format.get_dimension_size() as i32,
+                    gl::FLOAT,
+                    0,
+                    format.get_stride() as i32,
+                    attribute.get_total_offset() as *const _,
+                );
+                gl::EnableVertexAttribArray(attribute.slot as u32);
+            }
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, mesh.gl_index_id);
 
             for index in 0..6 {
-                prefiler_pipeline.set_uniform_mat4("view\0", &capture_views[index]);
+                irrandiance_pipeline.set_uniform_mat4("view\0", &capture_views[index]);
                 let texture_target = gl::TEXTURE_CUBE_MAP_POSITIVE_X + index as u32;
+
                 gl::FramebufferTexture2D(
                     gl::FRAMEBUFFER,
                     gl::COLOR_ATTACHMENT0,
                     texture_target,
-                    prefilter_texture.id,
-                    mip,
+                    irradiance_texture.id,
+                    0,
                 );
 
                 gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-
                 let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
                 gl::DrawElements(
                     gl::TRIANGLES,
@@ -1184,75 +1102,202 @@ fn generate_ibl_environment(image_path: &'static str) -> render::skybox::Skybox 
                     start_index as *const _,
                 );
             }
-            gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
         }
 
-        // BRDF
-        gl::GenTextures(1, &mut brdf_texture.id);
-        gl::BindTexture(gl::TEXTURE_2D, brdf_texture.id);
+        gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
 
-        gl::TexImage2D(
-            gl::TEXTURE_2D,
-            0,
-            gl::RGB16F as i32,
-            1080,
-            1080,
-            0,
-            gl::RG,
-            gl::FLOAT,
-            std::ptr::null(),
-        );
+        // prefilter
+        {
+            gl::GenTextures(1, &mut prefilter_texture.id);
+            gl::BindTexture(gl::TEXTURE_CUBE_MAP, prefilter_texture.id);
 
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_EDGE as i32);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_EDGE as i32);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_R, gl::CLAMP_TO_EDGE as i32);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
+            for index in 0..6 {
+                let texture_target = gl::TEXTURE_CUBE_MAP_POSITIVE_X + index;
+                gl::TexImage2D(
+                    texture_target,
+                    0,
+                    gl::RGB16F as i32,
+                    128,
+                    128,
+                    0,
+                    gl::RGB,
+                    gl::FLOAT,
+                    std::ptr::null(),
+                );
+            }
 
-        gl::BindFramebuffer(gl::FRAMEBUFFER, capture_fbo);
-        gl::BindRenderbuffer(gl::RENDERBUFFER, capture_rbo);
-
-        gl::RenderbufferStorage(gl::RENDERBUFFER, gl::DEPTH_COMPONENT24, 512, 512);
-        gl::FramebufferTexture2D(
-            gl::FRAMEBUFFER,
-            gl::COLOR_ATTACHMENT0,
-            gl::TEXTURE_2D,
-            brdf_texture.id,
-            0,
-        );
-        gl::Viewport(0, 0, 1080, 1080);
-        gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-
-        let brdf_pipeline =
-            render::shader::Pipeline::new("resources/shaders/brdf.vs", "resources/shaders/brdf.fs")
-                .unwrap();
-
-        gl::UseProgram(brdf_pipeline.id);
-        let mesh: &Mesh = &quad_model.meshes[0];
-        let sub_mesh: &SubMesh = &mesh.sub_meshes[0];
-
-        gl::BindBuffer(gl::ARRAY_BUFFER, mesh.gl_buffer_id);
-
-        for attribute in &mesh.attributes {
-            let format: &Format = &attribute.format;
-            gl::VertexAttribPointer(
-                attribute.slot as u32,
-                format.get_dimension_size() as i32,
-                gl::FLOAT,
-                0,
-                format.get_stride() as i32,
-                attribute.get_total_offset() as *const _,
+            gl::TexParameteri(
+                gl::TEXTURE_CUBE_MAP,
+                gl::TEXTURE_WRAP_S,
+                gl::CLAMP_TO_EDGE as i32,
             );
-            gl::EnableVertexAttribArray(attribute.slot as u32);
-        }
+            gl::TexParameteri(
+                gl::TEXTURE_CUBE_MAP,
+                gl::TEXTURE_WRAP_T,
+                gl::CLAMP_TO_EDGE as i32,
+            );
+            gl::TexParameteri(
+                gl::TEXTURE_CUBE_MAP,
+                gl::TEXTURE_WRAP_R,
+                gl::CLAMP_TO_EDGE as i32,
+            );
+            gl::TexParameteri(
+                gl::TEXTURE_CUBE_MAP,
+                gl::TEXTURE_MIN_FILTER,
+                gl::LINEAR as i32,
+            );
+            gl::TexParameteri(
+                gl::TEXTURE_CUBE_MAP,
+                gl::TEXTURE_MIN_FILTER,
+                gl::LINEAR_MIPMAP_LINEAR as i32,
+            );
 
-        let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
-        gl::DrawElements(
-            gl::TRIANGLES,
-            sub_mesh.num_indices as i32,
-            gl::UNSIGNED_INT,
-            start_index as *const _,
-        );
+            gl::GenerateMipmap(gl::TEXTURE_CUBE_MAP);
+
+            let prefiler_pipeline = render::shader::Pipeline::new(
+                "resources/shaders/skybox.vs",
+                "resources/shaders/prefilterMap.fs",
+            )
+            .unwrap();
+
+            gl::UseProgram(prefiler_pipeline.id);
+            prefiler_pipeline.set_uniform_mat4("projection\0", &capture_projection);
+
+            gl::ActiveTexture(gl::TEXTURE0);
+            gl::BindTexture(gl::TEXTURE_CUBE_MAP, skybox_texture.id);
+            gl::BindFramebuffer(gl::FRAMEBUFFER, capture_fbo);
+
+            let max_mip_levels = 5;
+
+            let mesh: &Mesh = &cube_model.meshes[0];
+            let sub_mesh: &SubMesh = &mesh.sub_meshes[0];
+
+            gl::BindBuffer(gl::ARRAY_BUFFER, mesh.gl_buffer_id);
+
+            for attribute in &mesh.attributes {
+                let format: &Format = &attribute.format;
+                gl::VertexAttribPointer(
+                    attribute.slot as u32,
+                    format.get_dimension_size() as i32,
+                    gl::FLOAT,
+                    0,
+                    format.get_stride() as i32,
+                    attribute.get_total_offset() as *const _,
+                );
+                gl::EnableVertexAttribArray(attribute.slot as u32);
+            }
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, mesh.gl_index_id);
+            for mip in 0..max_mip_levels {
+                let pow = 0.5f64.powf(mip as f64);
+                let mip_width: u32 = (128.0 * pow) as u32;
+                let mip_height: u32 = (128.0 * pow) as u32;
+
+                gl::BindRenderbuffer(gl::RENDERBUFFER, capture_rbo);
+                gl::RenderbufferStorage(
+                    gl::RENDERBUFFER,
+                    gl::DEPTH_COMPONENT24,
+                    mip_width as i32,
+                    mip_height as i32,
+                );
+
+                gl::Viewport(0, 0, mip_width as i32, mip_height as i32);
+
+                let roughness = mip as f32 / (max_mip_levels - 1) as f32;
+                prefiler_pipeline.set_uniform_1f("roughness\0", roughness);
+
+                for index in 0..6 {
+                    prefiler_pipeline.set_uniform_mat4("view\0", &capture_views[index]);
+                    let texture_target = gl::TEXTURE_CUBE_MAP_POSITIVE_X + index as u32;
+                    gl::FramebufferTexture2D(
+                        gl::FRAMEBUFFER,
+                        gl::COLOR_ATTACHMENT0,
+                        texture_target,
+                        prefilter_texture.id,
+                        mip,
+                    );
+
+                    gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+
+                    let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
+                    gl::DrawElements(
+                        gl::TRIANGLES,
+                        sub_mesh.num_indices as i32,
+                        gl::UNSIGNED_INT,
+                        start_index as *const _,
+                    );
+                }
+            }
+        }
+        gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
+        // BRDF
+        {
+            gl::GenTextures(1, &mut brdf_texture.id);
+            gl::BindTexture(gl::TEXTURE_2D, brdf_texture.id);
+
+            gl::TexImage2D(
+                gl::TEXTURE_2D,
+                0,
+                gl::RGB16F as i32,
+                1080,
+                1080,
+                0,
+                gl::RG,
+                gl::FLOAT,
+                std::ptr::null(),
+            );
+
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_EDGE as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_EDGE as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
+
+            gl::BindFramebuffer(gl::FRAMEBUFFER, capture_fbo);
+            gl::BindRenderbuffer(gl::RENDERBUFFER, capture_rbo);
+
+            gl::RenderbufferStorage(gl::RENDERBUFFER, gl::DEPTH_COMPONENT24, 512, 512);
+            gl::FramebufferTexture2D(
+                gl::FRAMEBUFFER,
+                gl::COLOR_ATTACHMENT0,
+                gl::TEXTURE_2D,
+                brdf_texture.id,
+                0,
+            );
+            gl::Viewport(0, 0, 1080, 1080);
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+
+            let brdf_pipeline = render::shader::Pipeline::new(
+                "resources/shaders/brdf.vs",
+                "resources/shaders/brdf.fs",
+            )
+            .unwrap();
+
+            gl::UseProgram(brdf_pipeline.id);
+            let mesh: &Mesh = &quad_model.meshes[0];
+            let sub_mesh: &SubMesh = &mesh.sub_meshes[0];
+
+            gl::BindBuffer(gl::ARRAY_BUFFER, mesh.gl_buffer_id);
+
+            for attribute in &mesh.attributes {
+                let format: &Format = &attribute.format;
+                gl::VertexAttribPointer(
+                    attribute.slot as u32,
+                    format.get_dimension_size() as i32,
+                    gl::FLOAT,
+                    0,
+                    format.get_stride() as i32,
+                    attribute.get_total_offset() as *const _,
+                );
+                gl::EnableVertexAttribArray(attribute.slot as u32);
+            }
+
+            let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
+            gl::DrawElements(
+                gl::TRIANGLES,
+                sub_mesh.num_indices as i32,
+                gl::UNSIGNED_INT,
+                start_index as *const _,
+            );
+        }
         gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
     }
 
