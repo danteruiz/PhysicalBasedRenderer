@@ -8,7 +8,11 @@
 
 pub mod buffer;
 pub mod egui_painter;
+pub mod model;
 pub mod shader;
 pub mod skybox;
+pub mod stream;
 pub mod texture;
 pub use buffer::Buffer;
+pub use model::{Model, ModelCache, Shape, SubMesh};
+pub mod gl_utils;

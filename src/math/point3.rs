@@ -43,7 +43,6 @@ impl Mul<f32> for Point3 {
     }
 }
 
-// implement Sub
 impl Sub for Point3 {
     type Output = Vec3;
     fn sub(self, other: Self) -> Vec3 {

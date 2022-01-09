@@ -6,50 +6,64 @@
 // Distributed under the MIT Lisense
 // https://mit-license.org/
 
-const TYPE_SIZE: [usize; Type::Num as usize] = [4, 2, 4, 1, 4, 2, 1];
-const DIMENSION_SIZE: [usize; Dimension::Num as usize] = [1, 2, 3, 4];
+const TYPE_SIZE: [usize; Type::NUM as usize] = [4, 2, 4, 1, 4, 2, 1];
+const DIMENSION_SIZE: [usize; Dimension::NUM as usize] = [1, 2, 3, 4];
 
-#[allow(dead_code)]
-#[repr(u8)]
 #[derive(Copy, Debug, Clone)]
 pub enum Type {
-    Float = 0,
-    Int8,
-    Int16,
-    Int32,
-    UInt8,
-    UInt16,
-    UInt32,
-    Num,
+    FLOAT = 0,
+    INT8,
+    INT16,
+    INT32,
+    UINT8,
+    UINT16,
+    UINT32,
+    NUM,
 }
 
-#[allow(dead_code)]
-#[repr(u8)]
+#[derive(Copy, Debug, Clone)]
+pub enum Usage {
+    DATA = 0,
+    RED,
+    RG,
+    RGB,
+    RGBA,
+}
+
 #[derive(Copy, Debug, Clone)]
 pub enum Dimension {
-    Scalar = 0,
-    Vec2,
-    Vec3,
-    Vec4,
-    Num,
+    SCALAR = 0,
+    VEC2,
+    VEC3,
+    VED4,
+    NUM,
 }
 
 #[derive(Copy, Debug, Clone)]
 pub struct Format {
     pub dimension: Dimension,
-    pub m_type: Type,
+    pub _type: Type,
+    pub usage: Usage,
 }
 
 impl Format {
-    pub fn get_type_size(&self) -> usize {
-        TYPE_SIZE[self.m_type as usize]
+    pub fn new(dimension: Dimension, _type: Type, usage: Usage) -> Format {
+        Format {
+            dimension,
+            _type,
+            usage,
+        }
     }
-    pub fn get_dimension_size(&self) -> usize {
+
+    pub fn type_size(&self) -> usize {
+        TYPE_SIZE[self._type as usize]
+    }
+    pub fn dimension_size(&self) -> usize {
         DIMENSION_SIZE[self.dimension as usize]
     }
 
-    pub fn get_stride(self) -> usize {
-        self.get_type_size() * self.get_dimension_size()
+    pub fn stride(self) -> usize {
+        self.type_size() * self.dimension_size()
     }
 }
 
@@ -59,7 +73,6 @@ pub enum Slot {
     Position = 0,
     Normal,
     TexCoord,
-    Color,
 }
 
 #[derive(Copy, Debug, Clone)]
@@ -71,6 +84,6 @@ pub struct Attribute {
 
 impl Attribute {
     pub fn get_total_offset(self) -> usize {
-        return self.offset * self.format.get_type_size();
+        return self.offset * self.format.type_size();
     }
 }

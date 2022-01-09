@@ -23,6 +23,8 @@ pub const UNIT_Y: Vec3 = Vec3 {
     y: 1.0,
     z: 0.0,
 };
+
+pub const TWO_PI: f32 = 2.0 * std::f32::consts::PI;
 //
 // pub const UNIT_Z: Vec3 = Vec3 {
 //     x: 0.0,
