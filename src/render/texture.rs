@@ -7,13 +7,12 @@
 // https://mit-license.org/
 extern crate gl;
 
-use super::gl_utils;
 use super::stream;
 use gl::types::GLenum;
 use image;
 
 use std::boxed::Box;
-use std::collections::HashMap;
+//use std::collections::HashMap;
 use std::fs;
 
 const WHITE_COLOR: [u8; 4] = [0xFF, 0xFF, 0xFF, 0xFF];
@@ -80,7 +79,6 @@ impl Texture {
             let data_format = GLenum::from(format.usage);
             let data_type = GLenum::from(format._type);
 
-            println!("{:?}", data_format);
             gl::TexImage2D(
                 gl::TEXTURE_2D,
                 0,
@@ -107,16 +105,16 @@ impl Texture {
     }
 }
 
-static TEXTURE_COUNT: u32 = 0;
-type TextureHandle = usize;
-type TextureHandleMap = HashMap<String, TextureHandle>;
+//static TEXTURE_COUNT: u32 = 0;
+// type TextureHandle = usize;
+// type TextureHandleMap = HashMap<String, TextureHandle>;
 pub struct TextureCache {
     pub blue_texture: Box<Texture>,
     pub white_texture: Box<Texture>,
     pub gray_texture: Box<Texture>,
     pub black_texture: Box<Texture>,
-    texture_handle_map: TextureHandleMap,
-    textures: Vec<Box<Texture>>,
+    //    texture_handle_map: TextureHandleMap,
+    //   textures: Vec<Box<Texture>>,
 }
 
 impl TextureCache {
@@ -164,14 +162,14 @@ impl TextureCache {
                 format.clone(),
                 Type::Tex2D,
             ),
-            texture_handle_map: TextureHandleMap::new(),
-            textures: Vec::new(),
+            // texture_handle_map: TextureHandleMap::new(),
+            // textures: Vec::new(),
         }
     }
 
-    pub fn texture_from_handle(&mut self, texture_handle: TextureHandle) -> *mut Texture {
-        self.textures[texture_handle].as_mut()
-    }
+    // pub fn texture_from_handle(&mut self, texture_handle: TextureHandle) -> *mut Texture {
+    //     self.textures[texture_handle].as_mut()
+    // }
 }
 
 fn vertical_flip(pixels: &mut Vec<u8>, width: usize, height: usize, bytes_per_pixel: usize) {

@@ -248,7 +248,6 @@ impl Determinant for Mat4 {
 impl Inverse for Mat4 {
     fn inverse(&self) -> Mat4 {
         let mut m = Mat4::zero();
-
         let cofactor00 = self[2][2] * self[3][3] - self[3][2] * self[2][3];
         let cofactor01 = self[1][2] * self[3][3] - self[3][2] * self[1][3];
         let cofactor02 = self[1][2] * self[2][3] - self[2][2] * self[1][3];
@@ -289,7 +288,6 @@ impl Inverse for Mat4 {
         m[3][3] = self[0][0] * cofactor08 - self[1][0] * cofactor14 + self[2][0] * cofactor17;
 
         m = m.transpose();
-
         let determinant = m.determinant();
         let one_over_determinate = 1.0 / determinant;
         m * one_over_determinate

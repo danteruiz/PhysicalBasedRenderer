@@ -18,6 +18,6 @@ mod render;
 mod app;
 
 fn main() {
-    let mut application = app::App::init(500, 500);
+    let mut application = app::App::init(1080, 1080);
     application.run();
 }

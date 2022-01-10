@@ -1,3 +1,4 @@
+use std::clone::Clone;
 use std::cmp::PartialEq;
 use std::convert::From;
 use std::fmt;
@@ -6,7 +7,7 @@ use std::ops::Mul;
 use crate::math::ops::Cross;
 use crate::math::vec3::Vec3;
 
-#[derive(Debug)]
+#[derive(Debug, Copy)]
 pub struct Quat {
     pub w: f32,
     pub x: f32,
@@ -15,14 +16,14 @@ pub struct Quat {
 }
 
 impl Quat {
-    // fn new(w: f32, x: f32, y: f32, z: f32) -> Quat {
-    //     Quat {
-    //         w: w,
-    //         x: x,
-    //         y: y,
-    //         z: z,
-    //     }
-    // }
+    fn new(w: f32, x: f32, y: f32, z: f32) -> Quat {
+        Quat {
+            w: w,
+            x: x,
+            y: y,
+            z: z,
+        }
+    }
 
     pub fn identity() -> Quat {
         Quat {
@@ -68,6 +69,19 @@ impl From<Vec3> for Quat {
             y: c.x * s.y * c.z + s.x * c.y * s.z,
             z: c.x * c.y * s.z - s.x * s.y * c.z,
         }
+    }
+}
+
+impl Clone for Quat {
+    fn clone(&self) -> Self {
+        Quat::new(self.w, self.x, self.y, self.z)
+    }
+
+    fn clone_from(&mut self, source: &Self) {
+        self.w = source.w;
+        self.x = source.x;
+        self.y = source.y;
+        self.z = source.z;
     }
 }
 

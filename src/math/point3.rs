@@ -8,8 +8,9 @@
 
 //use crate::math::ops::{Cross, Dot};
 use crate::math::vec3::Vec3;
+use std::fmt;
 //use std::ops::{Add, Div, Index, IndexMut, Mul, Sub};
-use std::ops::{Mul, Sub};
+use std::ops::{Add, Mul, Sub};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Point3 {
@@ -43,6 +44,39 @@ impl Mul<f32> for Point3 {
     }
 }
 
+impl Mul<f32> for &Point3 {
+    type Output = Point3;
+    fn mul(self, scalar: f32) -> Point3 {
+        Point3 {
+            x: scalar * self.x,
+            y: scalar * self.y,
+            z: scalar * self.z,
+        }
+    }
+}
+
+impl Add<Vec3> for Point3 {
+    type Output = Self;
+    fn add(self, v: Vec3) -> Self {
+        Point3 {
+            x: self.x + v.x,
+            y: self.y + v.y,
+            z: self.z + v.z,
+        }
+    }
+}
+
+impl Add<Vec3> for &Point3 {
+    type Output = Point3;
+    fn add(self, v: Vec3) -> Point3 {
+        Point3 {
+            x: self.x + v.x,
+            y: self.y + v.y,
+            z: self.z + v.z,
+        }
+    }
+}
+
 impl Sub for Point3 {
     type Output = Vec3;
     fn sub(self, other: Self) -> Vec3 {
@@ -62,5 +96,11 @@ impl Sub for &Point3 {
             y: self.y - other.y,
             z: self.z - other.z,
         }
+    }
+}
+
+impl fmt::Display for Point3 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({:.6}, {:.6}, {:.6}", self.x, self.y, self.z,)
     }
 }

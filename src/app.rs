@@ -10,13 +10,51 @@ use crate::clock;
 
 use egui;
 use gl;
-use gl::types::GLenum;
 use glfw;
 use glfw::Context;
 
 use crate::math;
 use crate::render;
 
+struct RotatingCamera {
+    yaw_offset: f32,
+    position: math::Point3,
+    orientation: math::Quat,
+    fov: f32,
+}
+
+impl RotatingCamera {
+    fn new() -> RotatingCamera {
+        RotatingCamera {
+            yaw_offset: 0.0,
+            position: math::Point3::new(0.0, 0.0, 2.0),
+            orientation: math::Quat::identity(),
+            fov: 90.0,
+        }
+    }
+
+    fn projection_matrix(&self, width: f32, height: f32, near: f32, far: f32) -> math::Mat4 {
+        let apect_ratio = width / height;
+        math::shared::perspective(self.fov.to_radians(), apect_ratio, near, far)
+    }
+
+    fn view_matrix(&self, target_position: &math::Point3) -> math::Mat4 {
+        math::shared::look_at(&self.position, &target_position, &math::shared::UNIT_Y)
+    }
+
+    fn rotate_around_position(
+        &mut self,
+        position: &math::Point3,
+        yaw_speed: f32,
+        distance: f32,
+        delta_time: f32,
+    ) {
+        self.yaw_offset += yaw_speed * delta_time;
+        self.orientation =
+            math::Quat::from(math::Vec3::new(0.0, self.yaw_offset, 0.0).to_radians());
+        self.position = position + ((self.orientation * math::shared::UNIT_Z) * distance);
+    }
+}
 pub struct App {
     window: glfw::Window,
     events: std::sync::mpsc::Receiver<(f64, glfw::WindowEvent)>,
@@ -38,12 +76,6 @@ struct Light {
     position: math::Vec3,
     color: math::Vec3,
 }
-
-const EYE_POSITION: math::Point3 = math::Point3 {
-    x: 0.0,
-    y: 0.0,
-    z: 2.0,
-};
 
 static mut LIGHT: Light = Light {
     intensity: 0.4,
@@ -129,15 +161,18 @@ impl App {
             render::shader::Pipeline::new(vertex_shader_file, fragment_shader_file).unwrap();
 
         let target_position = math::Point3::new(0.0, 0.0, 0.0);
-        let view = math::shared::look_at(&EYE_POSITION, &target_position, &math::shared::UNIT_Y);
 
-        let texture_cache = render::texture::TextureCache::new();
         let _egui_painter = render::egui_painter::EguiPainter::new();
         egui_context.set_visuals(egui::Visuals::light());
 
+        let mut clock = clock::Clock::new();
+        let mut camera = RotatingCamera::new();
         self.window.make_current();
         self.window.set_key_polling(true);
+        let mut distance = 5.0;
         while !self.window.should_close() {
+            let delta_time = clock.delta_time();
+
             unsafe {
                 gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
                 gl::ClearColor(0.0, 0.0, 0.0, 1.0);
@@ -148,11 +183,10 @@ impl App {
             egui::Window::new("").show(&egui_context, |ui| {
                 ui.label("Lighting");
                 ui.separator();
-                unsafe {
-                    ui.add(egui::Slider::new(&mut LIGHT.position.x, -20.0..=20.0).text(": x"));
-                    ui.add(egui::Slider::new(&mut LIGHT.position.y, -20.0..=20.0).text(": y"));
-                    ui.add(egui::Slider::new(&mut LIGHT.position.z, -20.0..=20.0).text(": z"));
-                }
+
+                // ui.add(egui::Slider::new(&mut target_position.x, -400.0..=400.0).text(": x"));
+                // ui.add(egui::Slider::new(&mut target_position.y, -400.0..=400.0).text(": y"));
+                ui.add(egui::Slider::new(&mut distance, 2.0..=10.0).text(": z"));
 
                 ui.label("Material");
                 ui.separator();
@@ -162,12 +196,9 @@ impl App {
                         egui::Slider::new(&mut MATERIAL.roughness, 0.001..=1.0).text("roughness"),
                     );
                     ui.add(egui::Slider::new(&mut MATERIAL.metallic, 0.001..=1.0).text("metallic"));
-                    //ui.add(egui::Slider::new(&mut LIGHT.position.z, 0.001..=1.0));
                 }
 
                 ui.label("color");
-                ui.separator();
-
                 unsafe {
                     let mut color: [f32; 3] =
                         [MATERIAL.color.x, MATERIAL.color.y, MATERIAL.color.z];
@@ -177,16 +208,19 @@ impl App {
                 }
             });
 
+            camera.rotate_around_position(
+                &target_position,
+                math::shared::TWO_PI,
+                -distance,
+                delta_time,
+            );
             let window_size = self.window.get_size();
             let window_width = window_size.0;
             let window_height = window_size.1;
-            let angle: f32 = 90.0;
-            let projection = math::shared::perspective(
-                angle.to_radians(),
-                (window_width as f32 / window_height as f32) as f32,
-                0.3,
-                700.0,
-            );
+
+            let view = camera.view_matrix(&target_position);
+            let projection =
+                camera.projection_matrix(window_width as f32, window_height as f32, 0.3, 700.0);
 
             unsafe {
                 gl::Viewport(0, 0, window_width as i32, window_height as i32);
@@ -205,6 +239,7 @@ impl App {
                 view,
                 &pipeline,
                 &self.texture_cache,
+                &camera,
                 &skybox,
             );
 
@@ -327,10 +362,16 @@ fn render_model(
     view: math::Mat4,
     pipeline: &render::shader::Pipeline,
     texture_cache: &render::texture::TextureCache,
+    camera: &RotatingCamera,
     skybox: &render::skybox::Skybox,
 ) {
+    let mut model_matrix = math::Mat4::identity();
+    let scalar = 1.0;
+    model_matrix[0] *= scalar;
+    model_matrix[1] *= scalar;
+    model_matrix[2] *= scalar;
+
     for mesh in &model.meshes {
-        let model_matrix = math::Mat4::identity();
         unsafe {
             gl::BindBuffer(gl::ARRAY_BUFFER, mesh.buffer_id);
 
@@ -353,7 +394,7 @@ fn render_model(
             unsafe {
                 gl::UseProgram(pipeline.id);
 
-                let camera_position = EYE_POSITION;
+                let camera_position = &camera.position;
                 pipeline.set_uniform_mat4("model\0", &model_matrix);
                 pipeline.set_uniform_mat4("projection\0", &projection);
                 pipeline.set_uniform_mat4("view\0", &view);

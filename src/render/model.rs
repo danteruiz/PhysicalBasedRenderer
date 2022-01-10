@@ -57,8 +57,8 @@ impl ModelCache {
 }
 
 static PI: f32 = 3.14159265359;
-static X_SEGMENTS: f32 = 512.0;
-static Y_SEGMENTS: f32 = 512.0;
+static X_SEGMENTS: f32 = 64.0;
+static Y_SEGMENTS: f32 = 64.0;
 
 fn generate_quad_model() -> ModelPointer {
     let positions: [f32; 12] = [
@@ -226,9 +226,9 @@ fn generate_sphere_model() -> ModelPointer {
             let x_segment: f32 = x as f32 / X_SEGMENTS;
             let y_segment: f32 = y as f32 / Y_SEGMENTS;
 
-            let x_pos: f32 = (x_segment * 1.0 * PI).cos() * (y_segment * PI).sin();
+            let x_pos: f32 = (x_segment * 2.0 * PI).cos() * (y_segment * PI).sin();
             let y_pos: f32 = (y_segment * PI).cos();
-            let z_pos: f32 = (x_segment * 1.0 * PI).sin() * (y_segment * PI).sin();
+            let z_pos: f32 = (x_segment * 2.0 * PI).sin() * (y_segment * PI).sin();
 
             positions.push(x_pos);
             positions.push(y_pos);

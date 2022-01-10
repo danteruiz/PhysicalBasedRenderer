@@ -9,7 +9,7 @@
 use std::cmp::PartialEq;
 use std::convert::From;
 use std::fmt;
-use std::ops::{Add, Div, Index, IndexMut, Mul, Sub};
+use std::ops::{Add, Div, Index, IndexMut, Mul, MulAssign, Sub};
 
 use crate::math::point3::Point3;
 use crate::math::vec3::Vec3;
@@ -111,6 +111,15 @@ impl Div<f32> for Vec4 {
             z: self.z / scalar,
             w: self.w / scalar,
         }
+    }
+}
+
+impl MulAssign<f32> for Vec4 {
+    fn mul_assign(&mut self, scalar: f32) {
+        self.x *= scalar;
+        self.y *= scalar;
+        self.z *= scalar;
+        self.w *= scalar;
     }
 }
 

@@ -18,7 +18,7 @@ impl Clock {
         };
     }
 
-    pub fn get_delta_time(&mut self) -> f32 {
+    pub fn delta_time(&mut self) -> f32 {
         let current_time = Instant::now();
         let duration: Duration = current_time.duration_since(self.last_time);
         let delta_time: f32 = duration.as_millis() as f32;

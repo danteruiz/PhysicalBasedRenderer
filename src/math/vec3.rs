@@ -12,7 +12,7 @@ use super::{Point3, Vec4};
 use std::cmp::PartialEq;
 use std::convert::From;
 use std::fmt;
-use std::ops::{Add, Div, Index, IndexMut, Mul, Sub};
+use std::ops::{Add, Div, Index, IndexMut, Mul, MulAssign, Sub};
 
 // Vec3
 #[derive(Debug, Copy, Clone)]
@@ -111,6 +111,14 @@ impl Mul<f32> for Vec3 {
             y: scalar * self.y,
             z: scalar * self.z,
         }
+    }
+}
+
+impl MulAssign<f32> for Vec3 {
+    fn mul_assign(&mut self, scalar: f32) {
+        self.x *= scalar;
+        self.y *= scalar;
+        self.z *= scalar;
     }
 }
 

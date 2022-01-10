@@ -7,10 +7,9 @@
 // https://mit-license.org/
 
 use crate::math::mat4::Mat4;
-use crate::math::ops::{Cross, Inverse, Normalize};
+use crate::math::ops::{Cross, Dot, Normalize};
 use crate::math::point3::Point3;
 use crate::math::vec3::Vec3;
-use crate::math::vec4::Vec4;
 
 // pub const UNIT_X: Vec3 = Vec3 {
 //     x: 1.0,
@@ -24,13 +23,13 @@ pub const UNIT_Y: Vec3 = Vec3 {
     z: 0.0,
 };
 
-pub const TWO_PI: f32 = 2.0 * std::f32::consts::PI;
-//
-// pub const UNIT_Z: Vec3 = Vec3 {
-//     x: 0.0,
-//     y: 0.0,
-//     z: 1.0,
-// };
+pub const TWO_PI: f32 = 6.28319; //2.0 * std::f32::consts::PI;
+
+pub const UNIT_Z: Vec3 = Vec3 {
+    x: 0.0,
+    y: 0.0,
+    z: 1.0,
+};
 //
 // pub const UNIT_X_NEG: Vec3 = Vec3 {
 //     x: -1.0,
@@ -64,19 +63,23 @@ pub fn perspective(fov: f32, aspect: f32, near: f32, far: f32) -> Mat4 {
 }
 
 pub fn look_at(eye: &Point3, target: &Point3, target_up: &Vec3) -> Mat4 {
-    let forward = (target - eye).normalize();
-    let right = Vec3::cross(&forward, &target_up).normalize();
-    let up = Vec3::cross(&right, &forward);
+    let f = (target - eye).normalize();
+    let s = Vec3::cross(&f, &target_up).normalize();
+    let u = Vec3::cross(&s, &f).normalize();
 
-    let r = Mat4::new(
-        Vec4::from(right),
-        Vec4::from(up),
-        Vec4::from(forward * -1.0),
-        Vec4::new(0.0, 0.0, 0.0, 1.0),
-    );
+    let mut result = Mat4::identity();
 
-    let mut t = Mat4::identity();
-    t[3] = Vec4::from(eye);
-    let cam_to_world_mat = r * t;
-    cam_to_world_mat.inverse()
+    result[0][0] = s.x;
+    result[1][0] = s.y;
+    result[2][0] = s.z;
+    result[0][1] = u.x;
+    result[1][1] = u.y;
+    result[2][1] = u.z;
+    result[0][2] = -f.x;
+    result[1][2] = -f.y;
+    result[2][2] = -f.z;
+    result[3][0] = -Vec3::dot(&s, &eye);
+    result[3][1] = -Vec3::dot(&u, &eye);
+    result[3][2] = Vec3::dot(&f, &eye);
+    result
 }
