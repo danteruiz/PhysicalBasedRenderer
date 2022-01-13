@@ -10,8 +10,7 @@ use std::cmp::PartialEq;
 use std::convert::From;
 use std::ops::{Index, IndexMut, Mul};
 
-use super::Mat4;
-use super::Vec3;
+use super::{Mat4, Quat, Vec3};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Mat3 {
@@ -39,6 +38,27 @@ impl From<Mat4> for Mat3 {
         Mat3::new(Vec3::from(m[0]), Vec3::from(m[1]), Vec3::from(m[2]))
     }
 }
+
+impl From<Quat> for Mat3 {
+    fn from(q: Quat) -> Mat3 {
+        let x2 = q.x * q.x;
+        let y2 = q.y * q.y;
+        let z2 = q.z * q.z;
+        let xy = q.x * q.y;
+        let xz = q.x * q.z;
+        let yz = q.y * q.z;
+        let wx = q.w * q.x;
+        let wy = q.w * q.y;
+        let wz = q.w * q.z;
+
+        let x = Vec3::new(1.0 - 2.0 * (y2 + z2), 2.0 * (xy - wz), 2.0 * (xz + wy));
+        let y = Vec3::new(2.0 * (xy + wz), 1.0 - 2.0 * (x2 - z2), 2.0 * (xz - wx));
+        let z = Vec3::new(2.0 * (xz - wy), 2.0 * (yz - wz), 1.0 - 2.0 * (x2 - y2));
+
+        Mat3::new(x, y, z)
+    }
+}
+
 impl Index<usize> for Mat3 {
     type Output = Vec3;
     fn index(&self, index: usize) -> &Vec3 {

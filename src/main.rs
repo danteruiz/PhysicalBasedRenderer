@@ -14,6 +14,7 @@ extern crate gltf;
 mod clock;
 mod math;
 mod render;
+mod ui;
 
 mod app;
 

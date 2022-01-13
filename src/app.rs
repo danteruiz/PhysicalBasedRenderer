@@ -6,15 +6,26 @@
 // Distributed under the MIT Lisense
 // https://mit-license.org/
 
-use crate::clock;
-
 use egui;
 use gl;
 use glfw;
 use glfw::Context;
 
+use crate::clock;
 use crate::math;
 use crate::render;
+use crate::ui;
+
+struct Entity<'r> {
+    transform: math::Transform,
+    model: &'r render::Model,
+}
+
+struct RenderArgs<'e> {
+    entities: &'e Vec<Entity<'e>>,
+    view_matrix: &'e math::Mat4,
+    projection_matrix: &'e math::Mat4,
+}
 
 struct RotatingCamera {
     yaw_offset: f32,
@@ -61,6 +72,7 @@ pub struct App {
     glfw: glfw::Glfw,
     model_cache: render::ModelCache,
     texture_cache: render::texture::TextureCache,
+    debug_ui: ui::Ui,
 }
 
 struct Material {
@@ -130,6 +142,7 @@ impl App {
             glfw,
             model_cache,
             texture_cache,
+            debug_ui: ui::Ui::new(),
         }
     }
 
@@ -144,7 +157,6 @@ impl App {
             gl::Enable(gl::LINE_SMOOTH);
         }
 
-        let mut egui_context = egui::CtxRef::default();
         let skybox = render::skybox::Skybox::new(
             "resources/images/IBL/PaperMill/PaperMill.hdr",
             &mut self.model_cache,
@@ -162,14 +174,21 @@ impl App {
 
         let target_position = math::Point3::new(0.0, 0.0, 0.0);
 
-        let _egui_painter = render::egui_painter::EguiPainter::new();
-        egui_context.set_visuals(egui::Visuals::light());
-
         let mut clock = clock::Clock::new();
         let mut camera = RotatingCamera::new();
         self.window.make_current();
         self.window.set_key_polling(true);
-        let mut distance = 5.0;
+
+        let sphere_model = self.model_cache.shape(&render::model::Shape::Sphere);
+
+        let entity = Entity {
+            transform: math::Transform::default(),
+            model: sphere_model,
+        };
+
+        let entites = vec![entity];
+
+        let distance = 0.0;
         while !self.window.should_close() {
             let delta_time = clock.delta_time();
 
@@ -179,35 +198,7 @@ impl App {
             }
             let raw_input = self.process_events();
 
-            egui_context.begin_frame(raw_input);
-            egui::Window::new("").show(&egui_context, |ui| {
-                ui.label("Lighting");
-                ui.separator();
-
-                // ui.add(egui::Slider::new(&mut target_position.x, -400.0..=400.0).text(": x"));
-                // ui.add(egui::Slider::new(&mut target_position.y, -400.0..=400.0).text(": y"));
-                ui.add(egui::Slider::new(&mut distance, 2.0..=10.0).text(": z"));
-
-                ui.label("Material");
-                ui.separator();
-
-                unsafe {
-                    ui.add(
-                        egui::Slider::new(&mut MATERIAL.roughness, 0.001..=1.0).text("roughness"),
-                    );
-                    ui.add(egui::Slider::new(&mut MATERIAL.metallic, 0.001..=1.0).text("metallic"));
-                }
-
-                ui.label("color");
-                unsafe {
-                    let mut color: [f32; 3] =
-                        [MATERIAL.color.x, MATERIAL.color.y, MATERIAL.color.z];
-                    ui.color_edit_button_rgb(&mut color);
-
-                    MATERIAL.color = math::Vec3::from(color);
-                }
-            });
-
+            self.debug_ui.update(raw_input);
             camera.rotate_around_position(
                 &target_position,
                 math::shared::TWO_PI,
@@ -233,24 +224,21 @@ impl App {
                 skybox.skybox.as_ref(),
             );
 
+            let render_args = RenderArgs {
+                entities: &entites,
+                view_matrix: &view,
+                projection_matrix: &&projection,
+            };
             render_model(
-                self.model_cache.shape(&render::model::Shape::Sphere),
-                projection,
-                view,
+                &render_args,
                 &pipeline,
                 &self.texture_cache,
                 &camera,
                 &skybox,
             );
 
-            let (_, shapes) = egui_context.end_frame();
-            let clipped_meshes = egui_context.tessellate(shapes);
-
-            _egui_painter.paint(
-                &clipped_meshes,
-                &egui_context.texture(),
-                &math::Vec2::new(window_size.0 as f32, window_size.1 as f32),
-            );
+            self.debug_ui
+                .render(window_width as f32, window_height as f32);
             self.window.swap_buffers();
         }
     }
@@ -319,7 +307,7 @@ fn render_skybox(
     }
     pipeline.set_uniform_mat4("projection\0", &projection);
     let new_view = math::Mat4::from(math::Mat3::from(view));
-    pipeline.set_uniform_mat4("view\0", &new_view); //&math::Mat4::from(math::Mat3::from(view)));
+    pipeline.set_uniform_mat4("view\0", &new_view);
 
     let mesh = &model.meshes[0];
     let sub_mesh = &mesh.sub_meshes[0];
@@ -357,79 +345,75 @@ fn render_skybox(
 }
 
 fn render_model(
-    model: &render::model::Model,
-    projection: math::Mat4,
-    view: math::Mat4,
+    render_args: &RenderArgs,
     pipeline: &render::shader::Pipeline,
     texture_cache: &render::texture::TextureCache,
     camera: &RotatingCamera,
     skybox: &render::skybox::Skybox,
 ) {
-    let mut model_matrix = math::Mat4::identity();
-    let scalar = 1.0;
-    model_matrix[0] *= scalar;
-    model_matrix[1] *= scalar;
-    model_matrix[2] *= scalar;
-
-    for mesh in &model.meshes {
-        unsafe {
-            gl::BindBuffer(gl::ARRAY_BUFFER, mesh.buffer_id);
-
-            for attribute in &mesh.attributes {
-                let format = &attribute.format;
-                gl::VertexAttribPointer(
-                    attribute.slot as u32,
-                    format.dimension_size() as i32,
-                    gl::FLOAT,
-                    0,
-                    format.stride() as i32,
-                    attribute.get_total_offset() as *const _,
-                );
-                gl::EnableVertexAttribArray(attribute.slot as u32);
-            }
-            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, mesh.index_id);
-        }
-
-        for sub_mesh in &mesh.sub_meshes {
+    for entity in render_args.entities {
+        let model = &entity.model;
+        let model_matrix = &entity.transform.matrix();
+        for mesh in model.meshes {
             unsafe {
-                gl::UseProgram(pipeline.id);
+                gl::BindBuffer(gl::ARRAY_BUFFER, mesh.buffer_id);
 
-                let camera_position = &camera.position;
-                pipeline.set_uniform_mat4("model\0", &model_matrix);
-                pipeline.set_uniform_mat4("projection\0", &projection);
-                pipeline.set_uniform_mat4("view\0", &view);
+                for attribute in &mesh.attributes {
+                    let format = &attribute.format;
+                    gl::VertexAttribPointer(
+                        attribute.slot as u32,
+                        format.dimension_size() as i32,
+                        gl::FLOAT,
+                        0,
+                        format.stride() as i32,
+                        attribute.get_total_offset() as *const _,
+                    );
+                    gl::EnableVertexAttribArray(attribute.slot as u32);
+                }
+                gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, mesh.index_id);
+            }
 
-                pipeline.set_uniform_1f("light.intensity\0", LIGHT.intensity);
-                pipeline.set_uniform_1f("light.ambient\0", LIGHT.ambient);
-                pipeline.set_uniform_vec3("light.color\0", &LIGHT.color);
-                pipeline.set_uniform_vec3("light.position\0", &LIGHT.position);
-                pipeline.set_uniform_vec3("material.color\0", &MATERIAL.color);
-                pipeline.set_uniform_1f("material.roughness\0", MATERIAL.roughness);
-                pipeline.set_uniform_1f("material.metallic\0", MATERIAL.metallic);
-                pipeline.set_uniform_1f("material.ao\0", MATERIAL.ao);
-                pipeline.set_uniform_1f("material.specular\0", MATERIAL.roughness);
-                pipeline.set_uniform_point3("camera_position\0", &camera_position);
-                pipeline.set_uniform_1i("u_albedoMap\0", 0);
-                pipeline.set_uniform_1i("u_normalMap\0", 1);
-                pipeline.set_uniform_1i("u_metallicMap\0", 2);
-                pipeline.set_uniform_1i("u_brdfMap\0", 3);
-                pipeline.set_uniform_1i("u_irradianceMap\0", 4);
-                pipeline.set_uniform_1i("u_prefilterMap\0", 5);
+            for sub_mesh in &mesh.sub_meshes {
+                unsafe {
+                    gl::UseProgram(pipeline.id);
 
-                enable_texture(gl::TEXTURE_2D, 0, texture_cache.white_texture.id);
-                //enable_texture(1, texture_cache.blue_texture.id);
-                enable_texture(gl::TEXTURE_2D, 2, texture_cache.gray_texture.id);
-                enable_texture(gl::TEXTURE_2D, 3, skybox.brdf.id);
-                enable_texture(gl::TEXTURE_CUBE_MAP, 4, skybox.irradiance.id);
-                enable_texture(gl::TEXTURE_CUBE_MAP, 5, skybox.prefilter.id);
+                    let camera_position = &camera.position;
+                    pipeline.set_uniform_mat4("model\0", &model_matrix);
+                    pipeline.set_uniform_mat4("projection\0", &render_args.projection_matrix);
+                    pipeline.set_uniform_mat4("view\0", &render_args.view_matrix);
 
-                let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
-                gl::DrawElements(
-                    gl::TRIANGLES,
-                    sub_mesh.num_indices as i32,
-                    gl::UNSIGNED_INT,
-                    start_index as *const _,
-                );
+                    pipeline.set_uniform_1f("light.intensity\0", LIGHT.intensity);
+                    pipeline.set_uniform_1f("light.ambient\0", LIGHT.ambient);
+                    pipeline.set_uniform_vec3("light.color\0", &LIGHT.color);
+                    pipeline.set_uniform_vec3("light.position\0", &LIGHT.position);
+                    pipeline.set_uniform_vec3("material.color\0", &MATERIAL.color);
+                    pipeline.set_uniform_1f("material.roughness\0", MATERIAL.roughness);
+                    pipeline.set_uniform_1f("material.metallic\0", MATERIAL.metallic);
+                    pipeline.set_uniform_1f("material.ao\0", MATERIAL.ao);
+                    pipeline.set_uniform_1f("material.specular\0", MATERIAL.roughness);
+                    pipeline.set_uniform_point3("camera_position\0", &camera_position);
+                    pipeline.set_uniform_1i("u_albedoMap\0", 0);
+                    pipeline.set_uniform_1i("u_normalMap\0", 1);
+                    pipeline.set_uniform_1i("u_metallicMap\0", 2);
+                    pipeline.set_uniform_1i("u_brdfMap\0", 3);
+                    pipeline.set_uniform_1i("u_irradianceMap\0", 4);
+                    pipeline.set_uniform_1i("u_prefilterMap\0", 5);
+
+                    enable_texture(gl::TEXTURE_2D, 0, texture_cache.white_texture.id);
+                    //enable_texture(1, texture_cache.blue_texture.id);
+                    enable_texture(gl::TEXTURE_2D, 2, texture_cache.gray_texture.id);
+                    enable_texture(gl::TEXTURE_2D, 3, skybox.brdf.id);
+                    enable_texture(gl::TEXTURE_CUBE_MAP, 4, skybox.irradiance.id);
+                    enable_texture(gl::TEXTURE_CUBE_MAP, 5, skybox.prefilter.id);
+
+                    let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
+                    gl::DrawElements(
+                        gl::TRIANGLES,
+                        sub_mesh.num_indices as i32,
+                        gl::UNSIGNED_INT,
+                        start_index as *const _,
+                    );
+                }
             }
         }
     }

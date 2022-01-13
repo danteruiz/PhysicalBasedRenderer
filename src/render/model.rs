@@ -51,7 +51,7 @@ impl ModelCache {
         ModelCache { shape_map }
     }
 
-    pub fn shape(&mut self, shape: &Shape) -> &Model {
+    pub fn shape(&self, shape: &Shape) -> &Model {
         self.shape_map[shape].as_ref()
     }
 }

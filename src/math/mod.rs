@@ -19,6 +19,8 @@ pub use mat4::Mat4;
 mod ops;
 mod point3;
 pub use point3::Point3;
+mod transform;
+pub use transform::Transform;
 
 mod quat;
 pub use quat::Quat;
