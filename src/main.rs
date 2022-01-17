@@ -11,14 +11,13 @@ extern crate gl;
 extern crate glfw;
 extern crate gltf;
 
+mod app;
 mod clock;
 mod math;
 mod render;
 mod ui;
 
-mod app;
-
 fn main() {
-    let mut application = app::App::init(1080, 1080);
+    let application = app::App::init(1080, 1080);
     application.run();
 }

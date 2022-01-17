@@ -1,4 +1,3 @@
-* build instructions
-** Install vcpkg, cmake 
-*** Install the following packages (Need to make this part of the cmake build process)
-*** glm, glfw, glew, spdlog, stb, bullet3, imgui with glfw and opengl bindings
+# Physical Based Renderer
+This is a project where I can learn rust and graphics programming.
+![screenshot](./images/screenshot.png)

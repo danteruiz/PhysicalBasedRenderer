@@ -16,9 +16,10 @@ use crate::math;
 use crate::render;
 use crate::ui;
 
-struct Entity<'r> {
-    transform: math::Transform,
-    model: &'r render::Model,
+pub struct Entity<'r> {
+    pub transform: math::Transform,
+    pub model: &'r render::Model,
+    pub material: Material,
 }
 
 struct RenderArgs<'e> {
@@ -66,20 +67,37 @@ impl RotatingCamera {
         self.position = position + ((self.orientation * math::shared::UNIT_Z) * distance);
     }
 }
+
+type WindowEvents = std::sync::mpsc::Receiver<(f64, glfw::WindowEvent)>;
 pub struct App {
     window: glfw::Window,
-    events: std::sync::mpsc::Receiver<(f64, glfw::WindowEvent)>,
+    events: WindowEvents,
     glfw: glfw::Glfw,
     model_cache: render::ModelCache,
     texture_cache: render::texture::TextureCache,
     debug_ui: ui::Ui,
 }
 
-struct Material {
-    color: math::Vec3,
-    roughness: f32,
-    metallic: f32,
-    ao: f32,
+pub struct Material {
+    pub color: math::Vec3,
+    pub roughness: f32,
+    pub metallic: f32,
+    pub ao: f32,
+}
+
+impl Material {
+    pub fn new() -> Material {
+        Material {
+            color: math::Vec3 {
+                x: 1.0,
+                y: 1.0,
+                z: 1.0,
+            },
+            roughness: 1.0,
+            metallic: 0.0,
+            ao: 1.0,
+        }
+    }
 }
 
 struct Light {
@@ -102,17 +120,6 @@ static mut LIGHT: Light = Light {
         y: 1.0,
         z: 1.0,
     },
-};
-
-static mut MATERIAL: Material = Material {
-    color: math::Vec3 {
-        x: 1.0,
-        y: 1.0,
-        z: 1.0,
-    },
-    roughness: 1.0,
-    metallic: 0.0,
-    ao: 1.0,
 };
 
 impl App {
@@ -146,7 +153,15 @@ impl App {
         }
     }
 
-    pub fn run(&mut self) {
+    pub fn run(self) {
+        let App {
+            mut window,
+            events,
+            mut glfw,
+            mut model_cache,
+            texture_cache,
+            mut debug_ui,
+        } = self;
         unsafe {
             gl::DepthFunc(gl::LEQUAL);
 
@@ -159,7 +174,7 @@ impl App {
 
         let skybox = render::skybox::Skybox::new(
             "resources/images/IBL/PaperMill/PaperMill.hdr",
-            &mut self.model_cache,
+            &mut model_cache,
         );
         let skybox_pipeline = render::shader::Pipeline::new(
             "resources/shaders/skybox.vs",
@@ -176,36 +191,36 @@ impl App {
 
         let mut clock = clock::Clock::new();
         let mut camera = RotatingCamera::new();
-        self.window.make_current();
-        self.window.set_key_polling(true);
+        window.make_current();
+        window.set_key_polling(true);
 
-        let sphere_model = self.model_cache.shape(&render::model::Shape::Sphere);
+        let sphere_model = model_cache.shape(&render::model::Shape::Sphere);
 
         let entity = Entity {
             transform: math::Transform::default(),
             model: sphere_model,
+            material: Material::new(),
         };
 
-        let entites = vec![entity];
+        let mut entites = vec![entity];
 
-        let distance = 0.0;
-        while !self.window.should_close() {
+        let distance = 4.0;
+        while !window.should_close() {
             let delta_time = clock.delta_time();
 
             unsafe {
                 gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
                 gl::ClearColor(0.0, 0.0, 0.0, 1.0);
             }
-            let raw_input = self.process_events();
-
-            self.debug_ui.update(raw_input);
+            let raw_input = App::process_events(&mut glfw, &mut window, &events);
+            debug_ui.update(raw_input, &mut entites);
             camera.rotate_around_position(
                 &target_position,
                 math::shared::TWO_PI,
                 -distance,
                 delta_time,
             );
-            let window_size = self.window.get_size();
+            let window_size = window.get_size();
             let window_width = window_size.0;
             let window_height = window_size.1;
 
@@ -217,7 +232,7 @@ impl App {
                 gl::Viewport(0, 0, window_width as i32, window_height as i32);
             }
             render_skybox(
-                self.model_cache.shape(&render::model::Shape::Cube),
+                model_cache.shape(&render::model::Shape::Cube),
                 projection,
                 view,
                 &skybox_pipeline,
@@ -227,28 +242,25 @@ impl App {
             let render_args = RenderArgs {
                 entities: &entites,
                 view_matrix: &view,
-                projection_matrix: &&projection,
+                projection_matrix: &projection,
             };
-            render_model(
-                &render_args,
-                &pipeline,
-                &self.texture_cache,
-                &camera,
-                &skybox,
-            );
+            render_model(&render_args, &pipeline, &texture_cache, &camera, &skybox);
 
-            self.debug_ui
-                .render(window_width as f32, window_height as f32);
-            self.window.swap_buffers();
+            debug_ui.render(window_width as f32, window_height as f32);
+            window.swap_buffers();
         }
     }
 
-    pub fn process_events(&mut self) -> egui::RawInput {
-        self.glfw.poll_events();
+    pub fn process_events(
+        glfw: &mut glfw::Glfw,
+        window: &mut glfw::Window,
+        events: &WindowEvents,
+    ) -> egui::RawInput {
+        glfw.poll_events();
         let mut raw_input = egui::RawInput::default();
 
-        let mouse_position = self.window.get_cursor_pos();
-        let mouse_primary_action = self.window.get_mouse_button(glfw::MouseButtonLeft);
+        let mouse_position = window.get_cursor_pos();
+        let mouse_primary_action = window.get_mouse_button(glfw::MouseButtonLeft);
 
         let is_mouse_button_pressed: bool = match mouse_primary_action {
             glfw::Action::Release => false,
@@ -276,10 +288,10 @@ impl App {
             modifiers: egui_modifiers,
         };
 
-        for (_, event) in glfw::flush_messages(&self.events) {
+        for (_, event) in glfw::flush_messages(events) {
             match event {
                 glfw::WindowEvent::Key(glfw::Key::Escape, _, glfw::Action::Press, _) => {
-                    self.window.set_should_close(true)
+                    window.set_should_close(true)
                 }
                 _ => {}
             }
@@ -313,7 +325,6 @@ fn render_skybox(
     let sub_mesh = &mesh.sub_meshes[0];
 
     unsafe {
-        pipeline.set_uniform_1i("skybox\0", 0);
         gl::ActiveTexture(gl::TEXTURE0);
         gl::BindTexture(gl::TEXTURE_CUBE_MAP, skybox_texture.id);
         gl::BindBuffer(gl::ARRAY_BUFFER, mesh.buffer_id);
@@ -354,7 +365,8 @@ fn render_model(
     for entity in render_args.entities {
         let model = &entity.model;
         let model_matrix = &entity.transform.matrix();
-        for mesh in model.meshes {
+        let material = &entity.material;
+        for mesh in &model.meshes {
             unsafe {
                 gl::BindBuffer(gl::ARRAY_BUFFER, mesh.buffer_id);
 
@@ -386,11 +398,11 @@ fn render_model(
                     pipeline.set_uniform_1f("light.ambient\0", LIGHT.ambient);
                     pipeline.set_uniform_vec3("light.color\0", &LIGHT.color);
                     pipeline.set_uniform_vec3("light.position\0", &LIGHT.position);
-                    pipeline.set_uniform_vec3("material.color\0", &MATERIAL.color);
-                    pipeline.set_uniform_1f("material.roughness\0", MATERIAL.roughness);
-                    pipeline.set_uniform_1f("material.metallic\0", MATERIAL.metallic);
-                    pipeline.set_uniform_1f("material.ao\0", MATERIAL.ao);
-                    pipeline.set_uniform_1f("material.specular\0", MATERIAL.roughness);
+                    pipeline.set_uniform_vec3("material.color\0", &material.color);
+                    pipeline.set_uniform_1f("material.roughness\0", material.roughness);
+                    pipeline.set_uniform_1f("material.metallic\0", material.metallic);
+                    pipeline.set_uniform_1f("material.ao\0", material.ao);
+                    pipeline.set_uniform_1f("material.specular\0", material.roughness);
                     pipeline.set_uniform_point3("camera_position\0", &camera_position);
                     pipeline.set_uniform_1i("u_albedoMap\0", 0);
                     pipeline.set_uniform_1i("u_normalMap\0", 1);

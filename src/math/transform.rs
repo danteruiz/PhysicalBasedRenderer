@@ -40,7 +40,7 @@ impl Default for Transform {
     fn default() -> Self {
         Transform {
             orientation: Quat::identity(),
-            scale: Vec3::new(0.0, 0.0, 0.0),
+            scale: Vec3::new(1.0, 1.0, 1.0),
             translation: Point3::new(0.0, 0.0, 0.0),
         }
     }
