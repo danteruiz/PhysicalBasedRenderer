@@ -83,6 +83,7 @@ pub struct Material {
     pub roughness: f32,
     pub metallic: f32,
     pub ao: f32,
+    pub ior: f32,
 }
 
 impl Material {
@@ -96,31 +97,53 @@ impl Material {
             roughness: 1.0,
             metallic: 0.0,
             ao: 1.0,
+            ior: 0.3,
         }
     }
 }
 
-struct Light {
-    intensity: f32,
-    ambient: f32,
-    position: math::Vec3,
-    color: math::Vec3,
+pub struct Light {
+    pub intensity: f32,
+    pub position: math::Vec4,
+    pub color: math::Vec4,
 }
 
-static mut LIGHT: Light = Light {
-    intensity: 0.4,
-    ambient: 1.0,
-    position: math::Vec3 {
-        x: 5.0,
-        y: 7.0,
-        z: 5.0,
-    },
-    color: math::Vec3 {
-        x: 1.0,
-        y: 1.0,
-        z: 1.0,
-    },
-};
+impl Light {
+    pub fn new(position: math::Vec4) -> Light {
+        Light {
+            intensity: 0.4,
+            position,
+            color: math::Vec4 {
+                x: 1.0,
+                y: 1.0,
+                z: 1.0,
+                w: 1.0,
+            },
+        }
+    }
+}
+
+struct LightManager {
+    light_buffer: render::Buffer,
+    lights: Vec<Light>,
+}
+
+impl LightManager {
+    fn new() -> LightManager {
+        LightManager {
+            light_buffer: render::Buffer::new(),
+            lights: Vec::new(),
+        }
+    }
+
+    fn add(&mut self, light: Light) {
+        self.lights.push(light);
+    }
+
+    fn get_data(&self) -> *const u8 {
+        self.light_buffer.data.as_ptr().cast()
+    }
+}
 
 impl App {
     pub fn init(width: u32, height: u32) -> App {
@@ -172,6 +195,7 @@ impl App {
             gl::Enable(gl::LINE_SMOOTH);
         }
 
+        glfw.set_swap_interval(glfw::SwapInterval::Sync(1));
         let skybox = render::skybox::Skybox::new(
             "resources/images/IBL/PaperMill/PaperMill.hdr",
             &mut model_cache,
@@ -203,6 +227,36 @@ impl App {
         };
 
         let mut entites = vec![entity];
+
+        let mut light_manager = LightManager::new();
+        light_manager.add(Light::new(math::Vec4::new(0.0, 10.0, 0.0, 1.0)));
+        light_manager.add(Light::new(math::Vec4::new(0.0, -10.0, 10.0, 1.0)));
+        light_manager.add(Light::new(math::Vec4::new(0.0, 0.0, 10.0, 1.0)));
+        light_manager.add(Light::new(math::Vec4::new(5.0, 0.0, -10.0, 1.0)));
+
+        let mut light_unifrom_buffer = 0;
+
+        if light_manager.lights.len() > 0 {
+            let light_buffer_size = light_manager.lights.len() * std::mem::size_of::<Light>();
+            light_manager
+                .light_buffer
+                .data
+                .extend_from_slice(to_byte_slice(&light_manager.lights));
+            unsafe {
+                gl::GenBuffers(1, &mut light_unifrom_buffer);
+                gl::BindBuffer(gl::UNIFORM_BUFFER, light_unifrom_buffer);
+                gl::BufferData(
+                    gl::UNIFORM_BUFFER,
+                    light_buffer_size as isize,
+                    light_manager.get_data() as *const _,
+                    gl::STATIC_DRAW,
+                );
+
+                gl::BindBuffer(gl::UNIFORM_BUFFER, 0);
+
+                gl::BindBufferBase(gl::UNIFORM_BUFFER, 0, light_unifrom_buffer);
+            }
+        }
 
         let distance = 4.0;
         while !window.should_close() {
@@ -394,15 +448,12 @@ fn render_model(
                     pipeline.set_uniform_mat4("projection\0", &render_args.projection_matrix);
                     pipeline.set_uniform_mat4("view\0", &render_args.view_matrix);
 
-                    pipeline.set_uniform_1f("light.intensity\0", LIGHT.intensity);
-                    pipeline.set_uniform_1f("light.ambient\0", LIGHT.ambient);
-                    pipeline.set_uniform_vec3("light.color\0", &LIGHT.color);
-                    pipeline.set_uniform_vec3("light.position\0", &LIGHT.position);
                     pipeline.set_uniform_vec3("material.color\0", &material.color);
                     pipeline.set_uniform_1f("material.roughness\0", material.roughness);
                     pipeline.set_uniform_1f("material.metallic\0", material.metallic);
                     pipeline.set_uniform_1f("material.ao\0", material.ao);
                     pipeline.set_uniform_1f("material.specular\0", material.roughness);
+                    pipeline.set_uniform_1f("material.ior\0", material.ior);
                     pipeline.set_uniform_point3("camera_position\0", &camera_position);
                     pipeline.set_uniform_1i("u_albedoMap\0", 0);
                     pipeline.set_uniform_1i("u_normalMap\0", 1);
@@ -437,5 +488,14 @@ fn enable_texture(texture_type: gl::types::GLenum, slot: u32, texture_id: u32) {
     unsafe {
         gl::ActiveTexture(texture_slot);
         gl::BindTexture(texture_type, texture_id);
+    }
+}
+
+fn to_byte_slice<'a, T>(floats: &'a [T]) -> &'a [u8] {
+    unsafe {
+        std::slice::from_raw_parts(
+            floats.as_ptr() as *const _,
+            floats.len() * std::mem::size_of::<T>(),
+        )
     }
 }

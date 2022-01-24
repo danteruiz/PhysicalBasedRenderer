@@ -9,3 +9,15 @@
 pub struct Buffer {
     pub data: Vec<u8>,
 }
+
+impl Buffer {
+    pub fn new() -> Buffer {
+        Buffer { data: Vec::new() }
+    }
+}
+
+// pub struct BufferView {
+//     buffer: *const Buffer,
+//     offset: usize,
+//     size: usize,
+// }

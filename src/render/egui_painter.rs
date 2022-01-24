@@ -14,6 +14,7 @@ use crate::math;
 
 pub struct EguiPainter {
     pipeline: shader::Pipeline,
+    delete_buffers: Vec<u32>,
 }
 
 impl EguiPainter {
@@ -24,11 +25,12 @@ impl EguiPainter {
                 "resources/shaders/egui.fs",
             )
             .unwrap(),
+            delete_buffers: Vec::new(),
         }
     }
 
     pub fn paint(
-        &self,
+        &mut self,
         clipped_meshes: &Vec<ClippedMesh>,
         egui_texture: &egui::epaint::Texture,
         window_size: &math::Vec2,
@@ -106,15 +108,14 @@ impl EguiPainter {
                 self.pipeline.set_uniform_1i("u_sampler\0", 0);
                 gl::ActiveTexture(gl::TEXTURE0);
                 gl::BindTexture(gl::TEXTURE_2D, egui_texture_id);
+                self.delete_buffers.push(vertex_buffer);
+                self.delete_buffers.push(index_buffer);
                 gl::DrawElements(
                     gl::TRIANGLES,
                     indices.len() as i32,
                     gl::UNSIGNED_INT,
                     0 as *const _,
                 );
-
-                gl::DeleteBuffers(1, &mut vertex_buffer);
-                gl::DeleteBuffers(1, &mut index_buffer);
             }
         }
     }

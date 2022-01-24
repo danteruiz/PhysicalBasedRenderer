@@ -10,6 +10,7 @@ extern crate egui;
 extern crate gl;
 extern crate glfw;
 extern crate gltf;
+extern crate rspirv;
 
 mod app;
 mod clock;

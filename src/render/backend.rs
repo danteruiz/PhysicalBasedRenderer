@@ -5,3 +5,18 @@
 //
 // Distributed under the MIT Lisense
 // https://mit-license.org/
+
+struct CameraInfo {
+    projection: math::Mat4,
+    view: math::Mat4,
+}
+
+struct Backend {
+    vao_buffer: u32,
+    camera_info_buffer: u32,
+    camera_info: CameraInfo,
+}
+
+impl Backend {
+    fn updateCameraInfo(&mut self, projection: math::Mat4, view: math::Mat4) {}
+}

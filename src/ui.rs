@@ -31,11 +31,6 @@ impl Ui {
         self.egui_context.begin_frame(raw_input);
 
         egui::Window::new("").show(&self.egui_context, |ui| {
-            // ui.label("Lights");
-            // ui.separator();
-            // let mut distance = 0.0;
-            // ui.add(egui::Slider::new(&mut distance, 2.0..=10.0).text(": z"));
-
             ui.label("Material");
             ui.separator();
 
@@ -44,6 +39,7 @@ impl Ui {
                 ui.add(egui::Slider::new(&mut material.roughness, 0.001..=1.0).text("roughness"));
                 ui.add(egui::Slider::new(&mut material.metallic, 0.001..=1.0).text("metallic"));
                 ui.add(egui::Slider::new(&mut material.ao, 0.0..=1.0).text("alpha"));
+                ui.add(egui::Slider::new(&mut material.ior, 0.0..=1.0).text("IOR"));
                 ui.label("color");
                 let mut color: [f32; 3] = [material.color.x, material.color.y, material.color.z];
                 ui.color_edit_button_rgb(&mut color);

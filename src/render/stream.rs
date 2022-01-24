@@ -35,7 +35,7 @@ pub enum Dimension {
     SCALAR = 0,
     VEC2,
     VEC3,
-    VED4,
+    VEC4,
     NUM,
 }
 
