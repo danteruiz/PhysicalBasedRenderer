@@ -103,6 +103,7 @@ impl Normalize for Vec3 {
         return *self / magnitude;
     }
 }
+
 impl Mul<f32> for Vec3 {
     type Output = Self;
     fn mul(self, scalar: f32) -> Self {

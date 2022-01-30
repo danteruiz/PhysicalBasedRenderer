@@ -14,6 +14,7 @@ use std::ops::{Add, Div, Index, IndexMut, Mul, MulAssign, Sub};
 use crate::math::point3::Point3;
 use crate::math::vec3::Vec3;
 // Vec4
+#[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct Vec4 {
     pub x: f32,
@@ -24,12 +25,7 @@ pub struct Vec4 {
 
 impl Vec4 {
     pub fn new(x: f32, y: f32, z: f32, w: f32) -> Vec4 {
-        Vec4 {
-            x: x,
-            y: y,
-            z: z,
-            w: w,
-        }
+        Vec4 { x, y, z, w }
     }
 
     pub fn zero() -> Vec4 {

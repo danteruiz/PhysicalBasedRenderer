@@ -30,24 +30,12 @@ pub const UNIT_Z: Vec3 = Vec3 {
     y: 0.0,
     z: 1.0,
 };
-//
-// pub const UNIT_X_NEG: Vec3 = Vec3 {
-//     x: -1.0,
-//     y: 0.0,
-//     z: 0.0,
-// };
-//
-// pub const UNIT_Y_NEG: Vec3 = Vec3 {
-//     x: 0.0,
-//     y: -1.0,
-//     z: 0.0,
-// };
-//
-// pub const UNIT_Z_NEG: Vec3 = Vec3 {
-//     x: 0.0,
-//     y: 0.0,
-//     z: -1.0,
-// };
+
+pub const UNIT_X: Vec3 = Vec3 {
+    x: 1.0,
+    y: 0.0,
+    z: 0.0,
+};
 
 pub fn perspective(fov: f32, aspect: f32, near: f32, far: f32) -> Mat4 {
     let mut result = Mat4::zero();
@@ -82,4 +70,14 @@ pub fn look_at(eye: &Point3, target: &Point3, target_up: &Vec3) -> Mat4 {
     result[3][1] = -Vec3::dot(&u, &eye);
     result[3][2] = Vec3::dot(&f, &eye);
     result
+}
+
+pub fn clamp(value: f32, min: f32, max: f32) -> f32 {
+    if value < min {
+        min
+    } else if value > max {
+        max
+    } else {
+        value
+    }
 }

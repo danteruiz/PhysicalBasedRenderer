@@ -14,6 +14,7 @@ extern crate rspirv;
 
 mod app;
 mod clock;
+mod file_watcher;
 mod math;
 mod render;
 mod ui;

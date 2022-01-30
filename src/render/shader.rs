@@ -9,12 +9,21 @@ use gl;
 
 use std::ffi::CString;
 use std::fs;
+use std::ops::Drop;
 
 use crate::math;
 static SHADER_BASE_PATH: &'static str = "resources/shaders/";
 
 pub struct Pipeline {
     pub id: u32,
+}
+
+impl Drop for Pipeline {
+    fn drop(&mut self) {
+        unsafe {
+            gl::DeleteProgram(self.id);
+        }
+    }
 }
 
 impl Pipeline {

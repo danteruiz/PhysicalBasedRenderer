@@ -11,12 +11,19 @@ use super::{Mat3, Mat4, Point3, Quat, Vec3, Vec4};
 use std::default::Default;
 
 pub struct Transform {
-    orientation: Quat,
-    scale: Vec3,
-    translation: Point3,
+    pub orientation: Quat,
+    pub scale: Vec3,
+    pub translation: Point3,
 }
 
 impl Transform {
+    pub fn new(translation: Point3) -> Transform {
+        Transform {
+            orientation: Quat::identity(),
+            scale: Vec3::new(1.0, 1.0, 1.0),
+            translation,
+        }
+    }
     pub fn matrix(&self) -> Mat4 {
         let mut result = Mat4::identity();
 

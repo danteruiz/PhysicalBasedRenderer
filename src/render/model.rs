@@ -6,6 +6,7 @@
 // Distributed under the MIT Lisense
 // https://mit-license.org/
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 
 use super::buffer;
@@ -24,8 +25,8 @@ pub struct SubMesh {
 }
 
 pub struct Mesh {
-    pub buffer_id: u32,
-    pub index_id: u32,
+    pub index_buffer: buffer::Buffer,
+    pub vertex_buffer: buffer::Buffer,
     pub sub_meshes: Vec<SubMesh>,
     pub attributes: Vec<Attribute>,
 }
@@ -34,7 +35,7 @@ pub struct Model {
     pub meshes: Vec<Mesh>,
 }
 
-pub type ModelPointer = Box<Model>;
+pub type ModelPointer = RefCell<Model>;
 type ShapeMap = HashMap<Shape, ModelPointer>;
 
 pub struct ModelCache {
@@ -51,8 +52,8 @@ impl ModelCache {
         ModelCache { shape_map }
     }
 
-    pub fn shape(&self, shape: &Shape) -> &Model {
-        self.shape_map[shape].as_ref()
+    pub fn shape(&self, shape: &Shape) -> &ModelPointer {
+        self.shape_map.get(shape).expect("shape not found")
     }
 }
 
@@ -97,40 +98,15 @@ fn generate_quad_model() -> ModelPointer {
     buffer_data.extend_from_slice(to_byte_slice(&normals));
     buffer_data.extend_from_slice(to_byte_slice(&tex_coords));
 
-    let vertex_buffer: buffer::Buffer = buffer::Buffer { data: buffer_data };
+    let vertex_buffer = buffer::Buffer::new(buffer_data);
 
     let mut index_buffer_data: Vec<u8> = Vec::new();
     index_buffer_data.extend_from_slice(to_byte_slice(&indices));
-    let index_buffer: buffer::Buffer = buffer::Buffer {
-        data: index_buffer_data,
-    };
-
-    let mut vertex_id: u32 = 0;
-    let mut index_id: u32 = 0;
-
-    unsafe {
-        gl::GenBuffers(1, &mut vertex_id);
-        gl::BindBuffer(gl::ARRAY_BUFFER, vertex_id);
-        gl::BufferData(
-            gl::ARRAY_BUFFER,
-            (vertex_buffer.data.len() * std::mem::size_of::<u8>()) as isize,
-            vertex_buffer.data.as_ptr().cast(),
-            gl::STATIC_DRAW,
-        );
-
-        gl::GenBuffers(1, &mut index_id);
-        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, index_id);
-        gl::BufferData(
-            gl::ELEMENT_ARRAY_BUFFER,
-            (index_buffer.data.len() * std::mem::size_of::<u8>()) as isize,
-            index_buffer.data.as_ptr().cast(),
-            gl::STATIC_DRAW,
-        );
-    }
+    let index_buffer = buffer::Buffer::new(index_buffer_data);
 
     let mesh: Mesh = Mesh {
-        buffer_id: vertex_id,
-        index_id,
+        index_buffer,
+        vertex_buffer,
         sub_meshes: vec![sub_mesh],
         attributes: vec![position_attribute, normal_attribute, tex_coord_attribute],
     };
@@ -153,6 +129,16 @@ fn generate_cube_model() -> ModelPointer {
         1.0, 1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0,
     ];
 
+    let normals: Vec<f32> = vec![
+        // right side 0 - 3
+        1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, // top side 4 - 7
+        0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, // bottom side 8 - 11
+        0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, // left 12 - 15
+        -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, // front 16 - 19
+        0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, // back 20 - 23
+        0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0,
+    ];
+
     let indices: Vec<i32> = vec![
         0, 1, 2, 2, 1, 3, // right side
         4, 5, 6, 4, 6, 7, // top side
@@ -168,6 +154,12 @@ fn generate_cube_model() -> ModelPointer {
         offset: 0,
     };
 
+    let normal_attribute = Attribute {
+        format: Format::new(Dimension::VEC3, Type::FLOAT, Usage::DATA),
+        slot: Slot::Normal,
+        offset: positions.len(),
+    };
+
     let sub_mesh: SubMesh = SubMesh {
         start_index: 0,
         num_indices: indices.len(),
@@ -175,43 +167,19 @@ fn generate_cube_model() -> ModelPointer {
 
     let mut buffer_data: Vec<u8> = Vec::new();
     buffer_data.extend_from_slice(to_byte_slice(&positions));
+    buffer_data.extend_from_slice(to_byte_slice(&normals));
 
-    let vertex_buffer: buffer::Buffer = buffer::Buffer { data: buffer_data };
+    let vertex_buffer = buffer::Buffer::new(buffer_data);
 
     let mut index_buffer_data: Vec<u8> = Vec::new();
     index_buffer_data.extend_from_slice(to_byte_slice(&indices));
-    let index_buffer: buffer::Buffer = buffer::Buffer {
-        data: index_buffer_data,
-    };
-
-    let mut vertex_id: u32 = 0;
-    let mut index_id: u32 = 0;
-
-    unsafe {
-        gl::GenBuffers(1, &mut vertex_id);
-        gl::BindBuffer(gl::ARRAY_BUFFER, vertex_id);
-        gl::BufferData(
-            gl::ARRAY_BUFFER,
-            (vertex_buffer.data.len() * std::mem::size_of::<u8>()) as isize,
-            vertex_buffer.data.as_ptr().cast(),
-            gl::STATIC_DRAW,
-        );
-
-        gl::GenBuffers(1, &mut index_id);
-        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, index_id);
-        gl::BufferData(
-            gl::ELEMENT_ARRAY_BUFFER,
-            (index_buffer.data.len() * std::mem::size_of::<u8>()) as isize,
-            index_buffer.data.as_ptr().cast(),
-            gl::STATIC_DRAW,
-        );
-    }
+    let index_buffer = buffer::Buffer::new(index_buffer_data);
 
     let mesh: Mesh = Mesh {
-        buffer_id: vertex_id,
-        index_id,
+        index_buffer,
+        vertex_buffer,
         sub_meshes: vec![sub_mesh],
-        attributes: vec![position_attribute],
+        attributes: vec![position_attribute, normal_attribute],
     };
 
     ModelPointer::new(Model { meshes: vec![mesh] })
@@ -274,11 +242,7 @@ fn generate_sphere_model() -> ModelPointer {
     };
 
     let normal_attribute: Attribute = Attribute {
-        format: Format {
-            usage: Usage::DATA,
-            dimension: Dimension::VEC3,
-            _type: Type::FLOAT,
-        },
+        format: Format::new(Dimension::VEC3, Type::FLOAT, Usage::DATA),
         slot: Slot::Normal,
         offset: positions.len(),
     };
@@ -286,40 +250,15 @@ fn generate_sphere_model() -> ModelPointer {
     let mut buffer_data: Vec<u8> = Vec::new();
     buffer_data.extend_from_slice(to_byte_slice(&positions[..]));
     buffer_data.extend_from_slice(to_byte_slice(&normals[..]));
-    let vertex_buffer: buffer::Buffer = buffer::Buffer { data: buffer_data };
+    let vertex_buffer = buffer::Buffer::new(buffer_data);
 
     let mut index_buffer_data: Vec<u8> = Vec::new();
     index_buffer_data.extend_from_slice(to_byte_slice(&indices[..]));
-    let index_buffer: buffer::Buffer = buffer::Buffer {
-        data: index_buffer_data,
-    };
-
-    let mut vertex_id: u32 = 0;
-    let mut index_id: u32 = 0;
-
-    unsafe {
-        gl::GenBuffers(1, &mut vertex_id);
-        gl::BindBuffer(gl::ARRAY_BUFFER, vertex_id);
-        gl::BufferData(
-            gl::ARRAY_BUFFER,
-            (vertex_buffer.data.len() * std::mem::size_of::<u8>()) as isize,
-            vertex_buffer.data.as_ptr().cast(),
-            gl::STATIC_DRAW,
-        );
-
-        gl::GenBuffers(1, &mut index_id);
-        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, index_id);
-        gl::BufferData(
-            gl::ELEMENT_ARRAY_BUFFER,
-            (index_buffer.data.len() * std::mem::size_of::<u8>()) as isize,
-            index_buffer.data.as_ptr().cast(),
-            gl::STATIC_DRAW,
-        );
-    }
+    let index_buffer = buffer::Buffer::new(index_buffer_data);
 
     let mesh: Mesh = Mesh {
-        buffer_id: vertex_id,
-        index_id,
+        index_buffer,
+        vertex_buffer,
         sub_meshes: vec![sub_mesh],
         attributes: vec![position_attribute, normal_attribute],
     };

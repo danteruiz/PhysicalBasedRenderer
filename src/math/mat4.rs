@@ -16,7 +16,7 @@ use std::ops::{Div, Index, IndexMut, Mul};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Mat4 {
-    pub n: [Vec4; 4],
+    pub(crate) n: [Vec4; 4],
 }
 impl Mat4 {
     pub fn new(v1: Vec4, v2: Vec4, v3: Vec4, v4: Vec4) -> Mat4 {

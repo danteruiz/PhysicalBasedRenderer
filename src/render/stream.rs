@@ -46,6 +46,7 @@ pub struct Format {
     pub usage: Usage,
 }
 
+// defines the format of
 impl Format {
     pub fn new(dimension: Dimension, _type: Type, usage: Usage) -> Format {
         Format {
@@ -87,3 +88,5 @@ impl Attribute {
         return self.offset * self.format.type_size();
     }
 }
+
+pub type Attributes = Vec<Attribute>;

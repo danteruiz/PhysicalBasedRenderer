@@ -5,7 +5,7 @@
 //
 // Distributed under the MIT Lisense
 // https://mit-license.org/
-use super::{model, shader, stream, texture};
+use super::{backend::*, model, shader, stream, texture};
 use crate::math;
 
 fn get_capture_views() -> Vec<math::Mat4> {
@@ -174,26 +174,14 @@ fn generate_skybox_texture(
             );
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
-            let model = model_cache.shape(&model::Shape::Cube);
+            let model = &mut model_cache.shape(&model::Shape::Cube).borrow_mut();
 
-            let mesh: &model::Mesh = &model.meshes[0];
-            let sub_mesh: &model::SubMesh = &mesh.sub_meshes[0];
+            let mesh = &mut model.meshes[0];
+            let sub_mesh = &mesh.sub_meshes[0];
 
-            gl::BindBuffer(gl::ARRAY_BUFFER, mesh.buffer_id);
-
-            for attribute in &mesh.attributes {
-                let format = &attribute.format;
-                gl::VertexAttribPointer(
-                    attribute.slot as u32,
-                    format.dimension_size() as i32,
-                    gl::FLOAT,
-                    0,
-                    format.stride() as i32,
-                    attribute.get_total_offset() as *const _,
-                );
-                gl::EnableVertexAttribArray(attribute.slot as u32);
-            }
-            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, mesh.index_id);
+            Backend::set_vertex_buffer(&mut mesh.vertex_buffer);
+            Backend::set_attributes(&mesh.attributes);
+            Backend::set_index_buffer(&mut mesh.index_buffer);
 
             let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
             gl::DrawElements(
@@ -308,25 +296,13 @@ fn generate_irradiance_map(
         gl::Viewport(0, 0, 32, 32);
         gl::BindFramebuffer(gl::FRAMEBUFFER, capture_fbo);
 
-        let cube_model = model_cache.shape(&model::Shape::Cube);
-        let mesh: &model::Mesh = &cube_model.meshes[0];
+        let cube_model = &mut model_cache.shape(&model::Shape::Cube).borrow_mut();
+        let mesh = &mut cube_model.meshes[0];
         let sub_mesh: &model::SubMesh = &mesh.sub_meshes[0];
 
-        gl::BindBuffer(gl::ARRAY_BUFFER, mesh.buffer_id);
-
-        for attribute in &mesh.attributes {
-            let format: &stream::Format = &attribute.format;
-            gl::VertexAttribPointer(
-                attribute.slot as u32,
-                format.dimension_size() as i32,
-                gl::FLOAT,
-                0,
-                format.stride() as i32,
-                attribute.get_total_offset() as *const _,
-            );
-            gl::EnableVertexAttribArray(attribute.slot as u32);
-        }
-        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, mesh.index_id);
+        Backend::set_vertex_buffer(&mut mesh.vertex_buffer);
+        Backend::set_attributes(&mesh.attributes);
+        Backend::set_index_buffer(&mut mesh.index_buffer);
 
         for index in 0..6 {
             irrandiance_pipeline.set_uniform_mat4("view\0", &capture_views[index]);
@@ -449,25 +425,13 @@ fn generate_prefilter_texture(
 
         let max_mip_levels = 5;
 
-        let cube_model = model_cache.shape(&model::Shape::Cube);
-        let mesh: &model::Mesh = &cube_model.meshes[0];
-        let sub_mesh: &model::SubMesh = &mesh.sub_meshes[0];
+        let mut cube_model = model_cache.shape(&model::Shape::Cube).borrow_mut();
+        let mesh = &mut cube_model.meshes[0];
+        let sub_mesh = &mesh.sub_meshes[0];
 
-        gl::BindBuffer(gl::ARRAY_BUFFER, mesh.buffer_id);
-
-        for attribute in &mesh.attributes {
-            let format = &attribute.format;
-            gl::VertexAttribPointer(
-                attribute.slot as u32,
-                format.dimension_size() as i32,
-                gl::FLOAT,
-                0,
-                format.stride() as i32,
-                attribute.get_total_offset() as *const _,
-            );
-            gl::EnableVertexAttribArray(attribute.slot as u32);
-        }
-        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, mesh.index_id);
+        Backend::set_vertex_buffer(&mut mesh.vertex_buffer);
+        Backend::set_attributes(&mesh.attributes);
+        Backend::set_index_buffer(&mut mesh.index_buffer);
         for mip in 0..max_mip_levels {
             let pow = 0.5f64.powf(mip as f64);
             let mip_width: u32 = (128.0 * pow) as u32;
@@ -579,24 +543,13 @@ fn generte_brdf_texture(model_cache: &mut model::ModelCache) -> texture::Texture
                 .unwrap();
 
         gl::UseProgram(brdf_pipeline.id);
-        let quad_model = model_cache.shape(&model::Shape::Quad);
-        let mesh = &quad_model.meshes[0];
+        let mut quad_model = model_cache.shape(&model::Shape::Quad).borrow_mut();
+        let mesh = &mut quad_model.meshes[0];
         let sub_mesh: &model::SubMesh = &mesh.sub_meshes[0];
 
-        gl::BindBuffer(gl::ARRAY_BUFFER, mesh.buffer_id);
-
-        for attribute in &mesh.attributes {
-            let format = &attribute.format;
-            gl::VertexAttribPointer(
-                attribute.slot as u32,
-                format.dimension_size() as i32,
-                gl::FLOAT,
-                0,
-                format.stride() as i32,
-                attribute.get_total_offset() as *const _,
-            );
-            gl::EnableVertexAttribArray(attribute.slot as u32);
-        }
+        Backend::set_vertex_buffer(&mut mesh.vertex_buffer);
+        Backend::set_attributes(&mesh.attributes);
+        Backend::set_index_buffer(&mut mesh.index_buffer);
 
         let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
         gl::DrawElements(

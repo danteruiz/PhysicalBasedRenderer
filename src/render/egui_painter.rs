@@ -35,6 +35,13 @@ impl EguiPainter {
         egui_texture: &egui::epaint::Texture,
         window_size: &math::Vec2,
     ) {
+        for buffer in &self.delete_buffers {
+            unsafe {
+                gl::DeleteBuffers(1, buffer);
+            }
+        }
+
+        self.delete_buffers.clear();
         let egui_texture_id = generate_gl_texture_from_egui_texture(&egui_texture);
         for clipped_mesh in clipped_meshes {
             let mesh: &egui::epaint::Mesh = &clipped_mesh.1;
@@ -117,6 +124,10 @@ impl EguiPainter {
                     0 as *const _,
                 );
             }
+        }
+
+        unsafe {
+            gl::DeleteTextures(1, &egui_texture_id);
         }
     }
 }

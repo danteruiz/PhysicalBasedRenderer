@@ -6,6 +6,7 @@
 // Distributed under the MIT Lisense
 // https://mit-license.org/
 
+pub mod backend;
 pub mod buffer;
 pub mod egui_painter;
 pub mod model;
@@ -16,3 +17,5 @@ pub mod texture;
 pub use buffer::Buffer;
 pub use model::{Model, ModelCache, Shape, SubMesh};
 pub mod gl_utils;
+pub use backend::*;
+pub mod resource;

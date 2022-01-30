@@ -10,7 +10,10 @@
 use crate::math::vec3::Vec3;
 use std::fmt;
 //use std::ops::{Add, Div, Index, IndexMut, Mul, Sub};
-use std::ops::{Add, Mul, Sub};
+use std::{
+    convert::From,
+    ops::{Add, Mul, Sub},
+};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Point3 {
@@ -40,6 +43,16 @@ impl Mul<f32> for Point3 {
             x: scalar * self.x,
             y: scalar * self.y,
             z: scalar * self.z,
+        }
+    }
+}
+
+impl From<Vec3> for Point3 {
+    fn from(v: Vec3) -> Point3 {
+        Point3 {
+            x: v.x,
+            y: v.y,
+            z: v.z,
         }
     }
 }
