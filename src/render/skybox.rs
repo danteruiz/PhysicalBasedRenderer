@@ -6,39 +6,39 @@
 // Distributed under the MIT Lisense
 // https://mit-license.org/
 use super::{backend::*, model, shader, stream, texture};
-use crate::math;
+use crate::iml;
 
-fn get_capture_views() -> Vec<math::Mat4> {
+fn get_capture_views() -> Vec<iml::Mat4> {
     vec![
-        math::shared::look_at(
-            &math::Point3::new(0.0, 0.0, 0.0),
-            &math::Point3::new(1.0, 0.0, 0.0),
-            &math::Vec3::new(0.0, -1.0, 0.0),
+        iml::shared::look_at(
+            &iml::Point3::new(0.0, 0.0, 0.0),
+            &iml::Point3::new(1.0, 0.0, 0.0),
+            &iml::Vec3::new(0.0, -1.0, 0.0),
         ),
-        math::shared::look_at(
-            &math::Point3::new(0.0, 0.0, 0.0),
-            &math::Point3::new(-1.0, 0.0, 0.0),
-            &math::Vec3::new(0.0, -1.0, 0.0),
+        iml::shared::look_at(
+            &iml::Point3::new(0.0, 0.0, 0.0),
+            &iml::Point3::new(-1.0, 0.0, 0.0),
+            &iml::Vec3::new(0.0, -1.0, 0.0),
         ),
-        math::shared::look_at(
-            &math::Point3::new(0.0, 0.0, 0.0),
-            &math::Point3::new(0.0, 1.0, 0.0),
-            &math::Vec3::new(0.0, 0.0, 1.0),
+        iml::shared::look_at(
+            &iml::Point3::new(0.0, 0.0, 0.0),
+            &iml::Point3::new(0.0, 1.0, 0.0),
+            &iml::Vec3::new(0.0, 0.0, 1.0),
         ),
-        math::shared::look_at(
-            &math::Point3::new(0.0, 0.0, 0.0),
-            &math::Point3::new(0.0, -1.0, 0.0),
-            &math::Vec3::new(0.0, 0.0, -1.0),
+        iml::shared::look_at(
+            &iml::Point3::new(0.0, 0.0, 0.0),
+            &iml::Point3::new(0.0, -1.0, 0.0),
+            &iml::Vec3::new(0.0, 0.0, -1.0),
         ),
-        math::shared::look_at(
-            &math::Point3::new(0.0, 0.0, 0.0),
-            &math::Point3::new(0.0, 0.0, 1.0),
-            &math::Vec3::new(0.0, -1.0, 0.0),
+        iml::shared::look_at(
+            &iml::Point3::new(0.0, 0.0, 0.0),
+            &iml::Point3::new(0.0, 0.0, 1.0),
+            &iml::Vec3::new(0.0, -1.0, 0.0),
         ),
-        math::shared::look_at(
-            &math::Point3::new(0.0, 0.0, 0.0),
-            &math::Point3::new(0.0, 0.0, -1.0),
-            &math::Vec3::new(0.0, -1.0, 0.0),
+        iml::shared::look_at(
+            &iml::Point3::new(0.0, 0.0, 0.0),
+            &iml::Point3::new(0.0, 0.0, -1.0),
+            &iml::Vec3::new(0.0, -1.0, 0.0),
         ),
     ]
 }
@@ -140,8 +140,8 @@ fn generate_skybox_texture(
         }
 
         let angle: f32 = 90.0;
-        let capture_projection: math::Mat4 =
-            math::shared::perspective(angle.to_radians(), 1.0, 0.1, 10.0);
+        let capture_projection: iml::Mat4 =
+            iml::shared::perspective(angle.to_radians(), 1.0, 0.1, 10.0);
 
         let capture_views = get_capture_views();
 
@@ -226,8 +226,8 @@ fn generate_irradiance_map(
         gl::GenRenderbuffers(1, &mut capture_rbo);
         gl::GenFramebuffers(1, &mut capture_fbo);
         let angle: f32 = 90.0;
-        let capture_projection: math::Mat4 =
-            math::shared::perspective(angle.to_radians(), 1.0, 0.1, 10.0);
+        let capture_projection: iml::Mat4 =
+            iml::shared::perspective(angle.to_radians(), 1.0, 0.1, 10.0);
 
         gl::BindTexture(gl::TEXTURE_CUBE_MAP, skybox_texture.id);
         gl::GenerateMipmap(gl::TEXTURE_CUBE_MAP);
@@ -414,8 +414,8 @@ fn generate_prefilter_texture(
         .unwrap();
 
         let angle: f32 = 90.0;
-        let capture_projection: math::Mat4 =
-            math::shared::perspective(angle.to_radians(), 1.0, 0.1, 10.0);
+        let capture_projection: iml::Mat4 =
+            iml::shared::perspective(angle.to_radians(), 1.0, 0.1, 10.0);
         gl::UseProgram(prefiler_pipeline.id);
         prefiler_pipeline.set_uniform_mat4("projection\0", &capture_projection);
 

@@ -11,7 +11,7 @@ use std::ffi::CString;
 use std::fs;
 use std::ops::Drop;
 
-use crate::math;
+use crate::iml;
 static SHADER_BASE_PATH: &'static str = "resources/shaders/";
 
 pub struct Pipeline {
@@ -27,7 +27,7 @@ impl Drop for Pipeline {
 }
 
 impl Pipeline {
-    pub fn set_uniform_mat4(&self, name: &str, matrix: &math::Mat4) {
+    pub fn set_uniform_mat4(&self, name: &str, matrix: &iml::Mat4) {
         unsafe {
             gl::UniformMatrix4fv(
                 gl::GetUniformLocation(self.id, name.as_ptr() as *const _),
@@ -38,7 +38,7 @@ impl Pipeline {
         }
     }
 
-    pub fn set_uniform_vec2(&self, name: &str, vec: &math::Vec2) {
+    pub fn set_uniform_vec2(&self, name: &str, vec: &iml::Vec2) {
         unsafe {
             gl::Uniform2fv(
                 gl::GetUniformLocation(self.id, name.as_ptr() as *const _),
@@ -48,7 +48,7 @@ impl Pipeline {
         }
     }
 
-    pub fn set_uniform_vec3(&self, name: &str, vec: &math::Vec3) {
+    pub fn set_uniform_vec3(&self, name: &str, vec: &iml::Vec3) {
         unsafe {
             gl::Uniform3fv(
                 gl::GetUniformLocation(self.id, name.as_ptr() as *const _),
@@ -58,7 +58,7 @@ impl Pipeline {
         }
     }
 
-    pub fn set_uniform_point3(&self, name: &str, p: &math::Point3) {
+    pub fn set_uniform_point3(&self, name: &str, p: &iml::Point3) {
         unsafe {
             gl::Uniform3fv(
                 gl::GetUniformLocation(self.id, name.as_ptr() as *const _),

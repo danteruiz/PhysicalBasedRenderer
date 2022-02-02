@@ -363,6 +363,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "iml"
+version = "0.1.0"
+source = "git+https://github.com/danteruiz/IML?rev=eaff175991e0922d35eaa9591a013abeb3114f6a#eaff175991e0922d35eaa9591a013abeb3114f6a"
+
+[[package]]
 name = "inflate"
 version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -570,6 +575,7 @@ dependencies = [
  "glfw",
  "gltf",
  "image 0.19.0",
+ "iml",
  "lazy_static",
  "rspirv",
  "rspirv-reflect",

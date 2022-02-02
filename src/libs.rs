@@ -6,5 +6,4 @@
 // Distributed under the MIT Lisense
 // https://mit-license.org/
 
-mod math;
 mod render;

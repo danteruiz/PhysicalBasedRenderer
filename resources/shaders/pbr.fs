@@ -62,7 +62,7 @@ void main() {
     surface.metallic *= materialRoughnessSample.b;
     vec3 F0 = vec3(0.04);
 
-    surface.f0 = mix(F0, surface.baseColor, surface.metallic);
+    surface.f0 = F0;// mix(F0, surface.baseColor, surface.metallic);
 
     vec3 lo = vec3(0.0);
 
@@ -90,7 +90,7 @@ void main() {
         vec3 radiance = light.color.rgb * attenuation * light.position.w;
 
         float D = NDF(NdotH, surface.roughness);
-        float G = G_SchlicksmithGGX(NdotL, NdotV, surface.roughness);
+        float G = G_SchlicksmithGGX(NdotL, NdotH, surface.roughness);
         vec3  F = F_Schlick2(NdotH, surface.f0);
 
         vec3 Fr =  (D * G * F) / (4.0 * NdotL * NdotV + 0.00001);

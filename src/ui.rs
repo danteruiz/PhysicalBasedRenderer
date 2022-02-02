@@ -9,7 +9,7 @@
 use egui;
 
 use crate::app::*;
-use crate::math;
+use crate::iml;
 use crate::render::egui_painter::EguiPainter;
 
 pub struct Ui {
@@ -52,7 +52,7 @@ impl Ui {
                 ui.color_edit_button_rgb(&mut color);
 
                 light.position = light_position;
-                light.color = math::Vec4::from(math::Vec3::from(color));
+                light.color = iml::Vec4::from(iml::Vec3::from(color));
                 ui.separator();
                 count += 1;
             }
@@ -68,7 +68,7 @@ impl Ui {
             //     let mut color: [f32; 3] = [material.color.x, material.color.y, material.color.z];
             //     ui.color_edit_button_rgb(&mut color);
             //
-            //     material.color = math::Vec3::from(color);
+            //     material.color = iml::Vec3::from(color);
             // }
         });
     }
@@ -79,7 +79,7 @@ impl Ui {
         self.egui_painter.paint(
             &clipped_meshes,
             &self.egui_context.texture(),
-            &math::Vec2::new(width, height),
+            &iml::Vec2::new(width, height),
         )
     }
 }

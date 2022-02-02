@@ -10,7 +10,7 @@ use egui::ClippedMesh;
 use gl;
 
 use super::shader;
-use crate::math;
+use crate::iml;
 
 pub struct EguiPainter {
     pipeline: shader::Pipeline,
@@ -33,7 +33,7 @@ impl EguiPainter {
         &mut self,
         clipped_meshes: &Vec<ClippedMesh>,
         egui_texture: &egui::epaint::Texture,
-        window_size: &math::Vec2,
+        window_size: &iml::Vec2,
     ) {
         for buffer in &self.delete_buffers {
             unsafe {

@@ -14,18 +14,14 @@ use gl;
 use glfw;
 use glfw::Context;
 
-use crate::{
-    clock, file_watcher,
-    math::{self, Point3},
-    render, ui,
-};
+use crate::{clock, file_watcher, render, ui};
 
 // pub struct AABB {
 //     pub center: math::Point3,
 //     pub raduis: math::Vec3,
 // }
 pub struct Entity<'e> {
-    pub transform: math::Transform,
+    pub transform: iml::Transform,
     pub model: &'e render::model::ModelPointer,
     pub material: Material,
     //    pub aabb: AABB,
@@ -33,41 +29,41 @@ pub struct Entity<'e> {
 
 struct RenderArgs<'e> {
     entities: &'e Vec<Entity<'e>>,
-    view_matrix: &'e math::Mat4,
-    projection_matrix: &'e math::Mat4,
+    view_matrix: &'e iml::Mat4,
+    projection_matrix: &'e iml::Mat4,
 }
 
 struct FPSCamera {
-    position: math::Point3,
-    orientation: math::Quat,
+    position: iml::Point3,
+    orientation: iml::Quat,
     fov: f32,
     yaw: f32,
     pitch: f32,
-    last_cursor: math::Vec2,
+    last_cursor: iml::Vec2,
     repeat: bool,
 }
 
 impl FPSCamera {
     fn new() -> FPSCamera {
         FPSCamera {
-            position: math::Point3::new(-2.0, 5.0, -2.0),
-            orientation: math::Quat::from(math::Vec3::new(40.0, 50.0, 0.0).to_radians()),
+            position: iml::Point3::new(-2.0, 5.0, -2.0),
+            orientation: iml::Quat::from(iml::Vec3::new(40.0, 50.0, 0.0).to_radians()),
             fov: 90.0,
             yaw: 40.0,
             pitch: 50.0,
-            last_cursor: math::Vec2::new(0.0, 0.0),
+            last_cursor: iml::Vec2::new(0.0, 0.0),
             repeat: false,
         }
     }
 
-    fn projection_matrix(&self, width: f32, height: f32, near: f32, far: f32) -> math::Mat4 {
+    fn projection_matrix(&self, width: f32, height: f32, near: f32, far: f32) -> iml::Mat4 {
         let apect_ratio = width / height;
-        math::shared::perspective(self.fov.to_radians(), apect_ratio, near, far)
+        iml::shared::perspective(self.fov.to_radians(), apect_ratio, near, far)
     }
 
-    fn view_matrix(&self) -> math::Mat4 {
-        let target_position = self.position + (self.orientation * math::shared::UNIT_Z);
-        math::shared::look_at(&self.position, &target_position, &math::shared::UNIT_Y)
+    fn view_matrix(&self) -> iml::Mat4 {
+        let target_position = self.position + (self.orientation * iml::shared::UNIT_Z);
+        iml::shared::look_at(&self.position, &target_position, &iml::shared::UNIT_Y)
     }
 
     fn update(&mut self, window: &mut glfw::Window, sensitivity: f32, delta_time: f32) {
@@ -79,7 +75,7 @@ impl FPSCamera {
 
         if button == glfw::Action::Press && !self.repeat {
             let mouse_position = window.get_cursor_pos();
-            self.last_cursor = math::Vec2::new(mouse_position.0 as f32, mouse_position.1 as f32);
+            self.last_cursor = iml::Vec2::new(mouse_position.0 as f32, mouse_position.1 as f32);
             self.repeat = true;
         }
 
@@ -88,7 +84,7 @@ impl FPSCamera {
             let y_offset = (mouse_position.1 as f32 - self.last_cursor.y) * sensitivity;
             let x_offset = (mouse_position.0 as f32 - self.last_cursor.x) * sensitivity * -1.0;
 
-            self.last_cursor = math::Vec2::new(mouse_position.0 as f32, mouse_position.1 as f32);
+            self.last_cursor = iml::Vec2::new(mouse_position.0 as f32, mouse_position.1 as f32);
             self.yaw += x_offset * delta_time;
             self.pitch += y_offset * delta_time;
 
@@ -99,8 +95,8 @@ impl FPSCamera {
                 self.pitch = -89.9;
             }
 
-            let euler_angle = math::Vec3::new(self.pitch, self.yaw, 0.0);
-            self.orientation = math::Quat::from(euler_angle.to_radians());
+            let euler_angle = iml::Vec3::new(self.pitch, self.yaw, 0.0);
+            self.orientation = iml::Quat::from(euler_angle.to_radians());
         }
 
         let mut x_direction = 0.0;
@@ -118,8 +114,8 @@ impl FPSCamera {
             z_direction = 1.0;
         }
 
-        let z_offset = (self.orientation * math::shared::UNIT_Z) * z_direction * 20.0;
-        let x_offset = (self.orientation * math::shared::UNIT_X) * x_direction * 20.0;
+        let z_offset = (self.orientation * iml::shared::UNIT_Z) * z_direction * 20.0;
+        let x_offset = (self.orientation * iml::shared::UNIT_X) * x_direction * 20.0;
 
         self.position = self.position + (z_offset + x_offset) * delta_time;
     }
@@ -190,7 +186,7 @@ pub struct App {
 }
 
 pub struct Material {
-    pub color: math::Vec3,
+    pub color: iml::Vec3,
     pub roughness: f32,
     pub metallic: f32,
     pub ao: f32,
@@ -199,7 +195,7 @@ pub struct Material {
 impl Material {
     pub fn new() -> Material {
         Material {
-            color: math::Vec3 {
+            color: iml::Vec3 {
                 x: 1.0,
                 y: 1.0,
                 z: 1.0,
@@ -213,12 +209,12 @@ impl Material {
 
 #[repr(C)]
 pub struct Light {
-    pub position: math::Vec4,
-    pub color: math::Vec4,
+    pub position: iml::Vec4,
+    pub color: iml::Vec4,
 }
 
 impl Light {
-    pub fn new(position: math::Vec4, color: math::Vec4) -> Light {
+    pub fn new(position: iml::Vec4, color: iml::Vec4) -> Light {
         Light { position, color }
     }
 }
@@ -320,18 +316,18 @@ impl App {
         let cube_model = model_cache.shape(&render::model::Shape::Cube);
 
         let mut floor = Entity {
-            transform: math::Transform::default(),
+            transform: iml::Transform::default(),
             model: cube_model,
             material: Material::new(),
         };
 
-        floor.transform.scale = math::Vec3::new(100.0, 0.5, 100.0);
-        floor.transform.translation = math::Point3::new(0.0, -2.0, 0.0);
+        floor.transform.scale = iml::Vec3::new(100.0, 0.5, 100.0);
+        floor.transform.translation = iml::Point3::new(0.0, -2.0, 0.0);
 
         let mut entities = vec![floor];
 
         let spacing = 3.0;
-        let starting_position = math::Point3::new(0.0, 1.0, 0.0);
+        let starting_position = iml::Point3::new(0.0, 1.0, 0.0);
         for x in 0..7 {
             let metallic = 1.0 - (x as f32 / 6.0);
             for z in 0..7 {
@@ -341,15 +337,15 @@ impl App {
 
                 let model = model_cache.shape(&render::model::Shape::Sphere);
                 let mut material = Material::new();
-                material.color = math::Vec3::new(1.0, 0.0, 0.0);
-                material.roughness = math::shared::clamp(z as f32 / 6.0, 0.05, 1.0);
+                material.color = iml::Vec3::new(1.0, 0.0, 0.0);
+                material.roughness = iml::shared::clamp(z as f32 / 6.0, 0.05, 1.0);
                 material.metallic = metallic;
 
                 println!(
                     "roughness: {} metallic: {}: position {}",
                     material.roughness, material.metallic, position
                 );
-                let transform = math::Transform::new(position);
+                let transform = iml::Transform::new(position);
 
                 entities.push(Entity {
                     transform,
@@ -360,20 +356,20 @@ impl App {
         }
         let mut light_manager = LightManager::new();
         light_manager.add(Light::new(
-            math::Vec4::new(0.0, 11.0, 0.0, 300.0),
-            math::Vec4::new(1.0, 1.0, 1.0, 300.0),
+            iml::Vec4::new(0.0, 11.0, 0.0, 300.0),
+            iml::Vec4::new(1.0, 1.0, 1.0, 300.0),
         ));
         light_manager.add(Light::new(
-            math::Vec4::new(0.0, 11.0, 15.0, 300.0),
-            math::Vec4::new(1.0, 1.0, 1.0, 300.0),
+            iml::Vec4::new(0.0, 11.0, 15.0, 300.0),
+            iml::Vec4::new(1.0, 1.0, 1.0, 300.0),
         ));
         light_manager.add(Light::new(
-            math::Vec4::new(15.0, 11.0, 0.0, 300.0),
-            math::Vec4::new(1.0, 1.0, 1.0, 300.0),
+            iml::Vec4::new(15.0, 11.0, 0.0, 300.0),
+            iml::Vec4::new(1.0, 1.0, 1.0, 300.0),
         ));
         light_manager.add(Light::new(
-            math::Vec4::new(15.0, 11.0, 15.0, 300.0),
-            math::Vec4::new(1.0, 1.0, 1.0, 300.0),
+            iml::Vec4::new(15.0, 11.0, 15.0, 300.0),
+            iml::Vec4::new(1.0, 1.0, 1.0, 300.0),
         ));
 
         let mut light_unifrom_buffer = 0;
@@ -582,8 +578,8 @@ impl App {
 
 fn render_skybox(
     model_pointer: &render::model::ModelPointer,
-    projection: math::Mat4,
-    view: math::Mat4,
+    projection: iml::Mat4,
+    view: iml::Mat4,
     pipeline: &render::shader::Pipeline,
     skybox_texture: &render::texture::Texture,
 ) {
@@ -595,7 +591,7 @@ fn render_skybox(
         gl::UseProgram(pipeline.id);
     }
     pipeline.set_uniform_mat4("projection\0", &projection);
-    let new_view = math::Mat4::from(math::Mat3::from(view));
+    let new_view = iml::Mat4::from(iml::Mat3::from(view));
     pipeline.set_uniform_mat4("view\0", &new_view);
 
     let mut model = model_pointer.borrow_mut();
