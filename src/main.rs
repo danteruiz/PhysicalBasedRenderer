@@ -21,5 +21,6 @@ mod ui;
 
 fn main() {
     let application = app::App::init(1080, 1080);
+
     application.run();
 }

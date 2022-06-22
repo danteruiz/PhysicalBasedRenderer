@@ -365,7 +365,7 @@ dependencies = [
 [[package]]
 name = "iml"
 version = "0.1.0"
-source = "git+https://github.com/danteruiz/IML?rev=eaff175991e0922d35eaa9591a013abeb3114f6a#eaff175991e0922d35eaa9591a013abeb3114f6a"
+source = "git+https://github.com/danteruiz/IML?rev=b8e73c0b7bed547475ab6b7c6dd0d9d3ade912f0#b8e73c0b7bed547475ab6b7c6dd0d9d3ade912f0"
 
 [[package]]
 name = "inflate"

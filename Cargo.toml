@@ -14,7 +14,7 @@ egui = "0.15.0"
 image = "0.19.0"
 rspirv = "0.7"
 rspirv-reflect = { git = "https://github.com/h3r2tic/rspirv-reflect", rev = "77364f98cbfb5c7ee3aa1347158670a9b8ec5bf5" }
-iml = { git = "https://github.com/danteruiz/IML", rev = "eaff175991e0922d35eaa9591a013abeb3114f6a"}
+iml = { git = "https://github.com/danteruiz/IML", rev = "b8e73c0b7bed547475ab6b7c6dd0d9d3ade912f0"}
 
 [dependencies.glfw]
 git = "https://github.com/bjz/glfw-rs.git"
