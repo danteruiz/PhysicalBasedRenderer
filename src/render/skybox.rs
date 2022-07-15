@@ -61,8 +61,7 @@ impl Skybox {
         );
         let hdr_texture = texture::Texture::new(
             &data.0,
-            gl::CLAMP_TO_EDGE as i32,
-            gl::LINEAR as i32,
+            texture::TextureDesc::default(),
             data.1,
             data.2,
             texture_format,
@@ -205,8 +204,7 @@ fn generate_skybox_texture(
         ),
         width: SKYBOX_RESOLUTION as u32,
         height: SKYBOX_RESOLUTION as u32,
-        wrap_mode: gl::CLAMP_TO_EDGE as i32,
-        filter_mode: gl::LINEAR as i32,
+        texture_desc: texture::TextureDesc::default(),
         _type: texture::Type::TexCUBE,
     };
 
@@ -340,8 +338,7 @@ fn generate_irradiance_map(
         ),
         width: SKYBOX_RESOLUTION as u32,
         height: SKYBOX_RESOLUTION as u32,
-        wrap_mode: gl::CLAMP_TO_EDGE as i32,
-        filter_mode: gl::LINEAR as i32,
+        texture_desc: texture::TextureDesc::default(),
         _type: texture::Type::TexCUBE,
     };
 
@@ -487,8 +484,7 @@ fn generate_prefilter_texture(
         ),
         width: SKYBOX_RESOLUTION as u32,
         height: SKYBOX_RESOLUTION as u32,
-        wrap_mode: gl::CLAMP_TO_EDGE as i32,
-        filter_mode: gl::LINEAR as i32,
+        texture_desc: texture::TextureDesc::default(),
         _type: texture::Type::TexCUBE,
     };
 
@@ -573,8 +569,7 @@ fn generte_brdf_texture(model_cache: &mut model::ModelCache) -> texture::Texture
         ),
         width: SKYBOX_RESOLUTION as u32,
         height: SKYBOX_RESOLUTION as u32,
-        wrap_mode: gl::CLAMP_TO_EDGE as i32,
-        filter_mode: gl::LINEAR as i32,
+        texture_desc: texture::TextureDesc::default(),
         _type: texture::Type::TexCUBE,
     };
 

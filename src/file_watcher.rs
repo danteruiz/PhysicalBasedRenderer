@@ -42,6 +42,7 @@ impl FileWatcher {
 
         if self.last_modified.elapsed().unwrap().as_secs() > modified.elapsed().unwrap().as_secs() {
             self.last_modified = modified;
+
             callback();
         }
     }

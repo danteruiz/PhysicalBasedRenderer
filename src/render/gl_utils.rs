@@ -82,3 +82,28 @@ impl From<texture::Type> for gl::types::GLenum {
         }
     }
 }
+
+impl From<texture::WrapMode> for gl::types::GLenum {
+    fn from(wrap_mode: texture::WrapMode) -> gl::types::GLenum {
+        match wrap_mode {
+            texture::WrapMode::REPEAT => gl::REPEAT,
+            texture::WrapMode::CLAMP => gl::CLAMP_TO_EDGE,
+            texture::WrapMode::BORDER => gl::CLAMP_TO_BORDER,
+            texture::WrapMode::MIRROR => gl::MIRROR_CLAMP_TO_EDGE,
+            _ => gl::MIRRORED_REPEAT,
+        }
+    }
+}
+
+impl From<texture::Filter> for gl::types::GLenum {
+    fn from(filter: texture::Filter) -> gl::types::GLenum {
+        match filter {
+            texture::Filter::NEAREST => gl::NEAREST,
+            texture::Filter::LINEAR => gl::LINEAR,
+            texture::Filter::NEAREST_MIP_NEAREST => gl::NEAREST_MIPMAP_NEAREST,
+            texture::Filter::LINEAR_MIP_NEAREST => gl::LINEAR_MIPMAP_NEAREST,
+            texture::Filter::NEAREST_MIP_LINEAR => gl::NEAREST_MIPMAP_LINEAR,
+            _ => gl::LINEAR_MIPMAP_LINEAR,
+        }
+    }
+}

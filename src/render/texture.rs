@@ -25,6 +25,27 @@ pub enum Type {
     TexCUBE,
 }
 
+#[allow(non_camel_case_types)]
+#[derive(Copy, Clone)]
+pub enum WrapMode {
+    REPEAT,
+    MIRROR,
+    CLAMP,
+    BORDER,
+    MIRROR_REPEAT,
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Copy, Clone)]
+pub enum Filter {
+    NEAREST,
+    LINEAR,
+    NEAREST_MIP_NEAREST,
+    LINEAR_MIP_NEAREST,
+    NEAREST_MIP_LINEAR,
+    LINEAR_MIP_LINEAR,
+}
+
 pub fn load_hdr_texture(path: &'static str) -> (Vec<u8>, u32, u32) {
     let bytes = fs::read(path).unwrap();
     let decoder = image::hdr::HDRDecoder::new(bytes.as_slice()).unwrap();
@@ -32,7 +53,6 @@ pub fn load_hdr_texture(path: &'static str) -> (Vec<u8>, u32, u32) {
     let rgb_data = decoder.read_image_hdr().unwrap();
 
     let mut rgba: Vec<u8> = Vec::with_capacity(rgb_data.len() * (3 * 4));
-
     for rgb in rgb_data {
         rgba.extend_from_slice(&rgb.data[0].to_ne_bytes());
         rgba.extend_from_slice(&rgb.data[1].to_ne_bytes());
@@ -44,22 +64,38 @@ pub fn load_hdr_texture(path: &'static str) -> (Vec<u8>, u32, u32) {
     (rgba, info.width, info.height)
 }
 
+pub struct TextureDesc {
+    wrap_s: WrapMode,
+    wrap_t: WrapMode,
+    min_filter: Filter,
+    mag_filter: Filter,
+}
+
+impl Default for TextureDesc {
+    fn default() -> Self {
+        Self {
+            wrap_s: WrapMode::CLAMP,
+            wrap_t: WrapMode::CLAMP,
+            min_filter: Filter::LINEAR,
+            mag_filter: Filter::LINEAR,
+        }
+    }
+}
+
 pub struct Texture {
     pub id: u32,
     pub format: stream::Format,
     pub _type: Type,
     pub width: u32,
     pub height: u32,
-    pub wrap_mode: i32,
-    pub filter_mode: i32,
+    pub texture_desc: TextureDesc,
 }
 
 pub type TexturePointer = Box<Texture>;
 impl Texture {
     pub fn new(
         pixels: &Vec<u8>,
-        wrap_mode: i32,
-        filter_mode: i32,
+        texture_desc: TextureDesc,
         width: u32,
         height: u32,
         format: stream::Format,
@@ -71,10 +107,16 @@ impl Texture {
             gl::BindTexture(gl::TEXTURE_2D, texture_id);
 
             gl::PixelStorei(gl::UNPACK_ALIGNMENT, 1);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, wrap_mode);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, wrap_mode);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, filter_mode);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, filter_mode);
+
+            let wrap_s = GLenum::from(texture_desc.wrap_s);
+            let wrap_t = GLenum::from(texture_desc.wrap_t);
+            let min_filter = GLenum::from(texture_desc.min_filter);
+            let mag_filter = GLenum::from(texture_desc.mag_filter);
+
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, wrap_s as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, wrap_t as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, min_filter as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, mag_filter as i32);
 
             let data_format = GLenum::from(format.usage);
             let data_type = GLenum::from(format._type);
@@ -98,23 +140,17 @@ impl Texture {
             _type,
             width,
             height,
-            wrap_mode,
-            filter_mode,
+            texture_desc,
         };
         Box::new(texture)
     }
 }
 
-//static TEXTURE_COUNT: u32 = 0;
-// type TextureHandle = usize;
-// type TextureHandleMap = HashMap<String, TextureHandle>;
 pub struct TextureCache {
     pub blue_texture: Box<Texture>,
     pub white_texture: Box<Texture>,
     pub gray_texture: Box<Texture>,
     pub black_texture: Box<Texture>,
-    //    texture_handle_map: TextureHandleMap,
-    //   textures: Vec<Box<Texture>>,
 }
 
 impl TextureCache {
@@ -128,8 +164,7 @@ impl TextureCache {
         TextureCache {
             blue_texture: Texture::new(
                 &Vec::from(BLUE_COLOR),
-                gl::CLAMP_TO_EDGE as i32,
-                gl::LINEAR as i32,
+                TextureDesc::default(),
                 1,
                 1,
                 format.clone(),
@@ -137,8 +172,7 @@ impl TextureCache {
             ),
             white_texture: Texture::new(
                 &Vec::from(WHITE_COLOR),
-                gl::CLAMP_TO_EDGE as i32,
-                gl::LINEAR as i32,
+                TextureDesc::default(),
                 1,
                 1,
                 format.clone(),
@@ -146,8 +180,7 @@ impl TextureCache {
             ),
             gray_texture: Texture::new(
                 &Vec::from(GRAY_COLOR),
-                gl::CLAMP_TO_EDGE as i32,
-                gl::LINEAR as i32,
+                TextureDesc::default(),
                 1,
                 1,
                 format.clone(),
@@ -155,21 +188,14 @@ impl TextureCache {
             ),
             black_texture: Texture::new(
                 &Vec::from(BLACK_COLOR),
-                gl::CLAMP_TO_EDGE as i32,
-                gl::LINEAR as i32,
+                TextureDesc::default(),
                 1,
                 1,
                 format.clone(),
                 Type::Tex2D,
             ),
-            // texture_handle_map: TextureHandleMap::new(),
-            // textures: Vec::new(),
         }
     }
-
-    // pub fn texture_from_handle(&mut self, texture_handle: TextureHandle) -> *mut Texture {
-    //     self.textures[texture_handle].as_mut()
-    // }
 }
 
 fn vertical_flip(pixels: &mut Vec<u8>, width: usize, height: usize, bytes_per_pixel: usize) {

@@ -6,6 +6,8 @@
 // Distributed under the MIT Lisense
 // https://mit-license.org/
 
+//extern crate ahash;
+extern crate ahash;
 extern crate egui;
 extern crate gl;
 extern crate glfw;

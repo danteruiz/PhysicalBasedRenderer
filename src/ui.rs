@@ -13,14 +13,14 @@ use crate::iml;
 use crate::render::egui_painter::EguiPainter;
 
 pub struct Ui {
-    egui_context: egui::CtxRef,
+    egui_context: egui::Context,
     egui_painter: EguiPainter,
     my_string: String,
 }
 
 impl Ui {
     pub fn new() -> Ui {
-        let egui_context = egui::CtxRef::default();
+        let egui_context = egui::Context::default();
         egui_context.set_visuals(egui::Visuals::light());
         Ui {
             egui_context,
@@ -74,12 +74,12 @@ impl Ui {
     }
 
     pub fn render(&mut self, width: f32, height: f32) {
-        let (_, shapes) = self.egui_context.end_frame();
-        let clipped_meshes = self.egui_context.tessellate(shapes);
+        let full_output = self.egui_context.end_frame();
+        let clipped_meshes = self.egui_context.tessellate(full_output.shapes);
         self.egui_painter.paint(
-            &clipped_meshes,
-            &self.egui_context.texture(),
-            &iml::Vec2::new(width, height),
+            clipped_meshes,
+            full_output.textures_delta,
+            iml::Vec2::new(width, height),
         )
     }
 }

@@ -340,11 +340,6 @@ impl App {
                 material.color = iml::Vec3::new(1.0, 0.0, 0.0);
                 material.roughness = iml::shared::clamp(z as f32 / 6.0, 0.05, 1.0);
                 material.metallic = metallic;
-
-                println!(
-                    "roughness: {} metallic: {}: position {}",
-                    material.roughness, material.metallic, position
-                );
                 let transform = iml::Transform::new(position);
 
                 entities.push(Entity {
