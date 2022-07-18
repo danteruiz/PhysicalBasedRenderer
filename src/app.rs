@@ -14,21 +14,19 @@ use gl;
 use glfw;
 use glfw::Context;
 
-use crate::{clock, file_watcher, render, ui};
+use crate::{
+    clock, file_watcher,
+    render::{self, ModelCache},
+    ui,
+};
 
-// pub struct AABB {
-//     pub center: math::Point3,
-//     pub raduis: math::Vec3,
-// }
-pub struct Entity<'e> {
+pub struct Entity {
     pub transform: iml::Transform,
-    pub model: &'e render::model::ModelPointer,
-    pub material: Material,
-    //    pub aabb: AABB,
+    pub model: render::model::ModelPointer,
 }
 
 struct RenderArgs<'e> {
-    entities: &'e Vec<Entity<'e>>,
+    entities: &'e Vec<Entity>,
     view_matrix: &'e iml::Mat4,
     projection_matrix: &'e iml::Mat4,
 }
@@ -185,28 +183,6 @@ pub struct App {
     debug_ui: ui::Ui,
 }
 
-pub struct Material {
-    pub color: iml::Vec3,
-    pub roughness: f32,
-    pub metallic: f32,
-    pub ao: f32,
-}
-
-impl Material {
-    pub fn new() -> Material {
-        Material {
-            color: iml::Vec3 {
-                x: 1.0,
-                y: 1.0,
-                z: 1.0,
-            },
-            roughness: 1.0,
-            metallic: 0.0,
-            ao: 1.0,
-        }
-    }
-}
-
 #[repr(C)]
 pub struct Light {
     pub position: iml::Vec4,
@@ -292,7 +268,7 @@ impl App {
 
         glfw.set_swap_interval(glfw::SwapInterval::Sync(1));
         let skybox = render::skybox::Skybox::new(
-            "resources/images/IBL/PaperMill/PaperMill.hdr",
+            "resources/images/IBL/TropicalBeach/TropicalBeach.hdr",
             &mut model_cache,
         );
         let skybox_pipeline = render::shader::Pipeline::new(
@@ -313,42 +289,49 @@ impl App {
         window.make_current();
         window.set_key_polling(true);
 
-        let cube_model = model_cache.shape(&render::model::Shape::Cube);
-
         let mut floor = Entity {
             transform: iml::Transform::default(),
-            model: cube_model,
-            material: Material::new(),
+            model: ModelCache::get_shape(render::model::Shape::Cube),
         };
 
         floor.transform.scale = iml::Vec3::new(100.0, 0.5, 100.0);
         floor.transform.translation = iml::Point3::new(0.0, -2.0, 0.0);
 
-        let mut entities = vec![floor];
+        //let mut entities = vec![floor];
+        let mut entities: Vec<Entity> = Vec::new();
+        //
+        // let spacing = 3.0;
+        // let starting_position = iml::Point3::new(0.0, 1.0, 0.0);
+        // for x in 0..7 {
+        //     let metallic = 1.0 - (x as f32 / 6.0);
+        //     for z in 0..7 {
+        //         let mut position = starting_position.clone();
+        //         position.x = z as f32 * spacing;
+        //         position.z = x as f32 * spacing;
+        //
+        //         let mut model = ModelCache::get_shape(render::model::Shape::Sphere);
+        //         let material = &mut model.get_mut().materials[0];
+        //         material.color = iml::Vec3::new(1.0, 0.0, 0.0);
+        //         material.roughness = iml::shared::clamp(z as f32 / 6.0, 0.05, 1.0);
+        //         material.metallic = metallic;
+        //         let transform = iml::Transform::new(position);
+        //
+        //         entities.push(Entity { transform, model });
+        //     }
+        // }
 
-        let spacing = 3.0;
-        let starting_position = iml::Point3::new(0.0, 1.0, 0.0);
-        for x in 0..7 {
-            let metallic = 1.0 - (x as f32 / 6.0);
-            for z in 0..7 {
-                let mut position = starting_position.clone();
-                position.x = z as f32 * spacing;
-                position.z = x as f32 * spacing;
-
-                let model = model_cache.shape(&render::model::Shape::Sphere);
-                let mut material = Material::new();
-                material.color = iml::Vec3::new(1.0, 0.0, 0.0);
-                material.roughness = iml::shared::clamp(z as f32 / 6.0, 0.05, 1.0);
-                material.metallic = metallic;
-                let transform = iml::Transform::new(position);
-
-                entities.push(Entity {
-                    transform,
-                    model,
-                    material,
-                });
-            }
+        if let Ok(gltf_model) =
+            render::model::load_gltf_model(String::from("resources/glTF-models/DamagedHelmet.glb"))
+        {
+            entities.push(Entity {
+                transform: iml::Transform::new(iml::Point3::new(0.0, 0.0, 0.0)),
+                model: gltf_model,
+            });
+            println!("add gltf model");
+        } else {
+            println!("failed to load model");
         }
+
         let mut light_manager = LightManager::new();
         light_manager.add(Light::new(
             iml::Vec4::new(0.0, 11.0, 0.0, 300.0),
@@ -409,8 +392,6 @@ impl App {
                 gl::ClearColor(0.0, 0.0, 0.0, 1.0);
             }
             let raw_input = App::process_events(&mut glfw, &mut window, &events);
-            //debug_ui.update(raw_input, &mut entites, &mut light_manager.lights);
-
             if light_manager.lights.len() > 0 {
                 light_manager.light_buffer.data.clear();
                 light_manager
@@ -590,16 +571,15 @@ fn render_skybox(
     pipeline.set_uniform_mat4("view\0", &new_view);
 
     let mut model = model_pointer.borrow_mut();
+    render::Backend::set_vertex_buffer(&mut model.vertex_buffer);
+    render::Backend::set_attributes(&model.attributes);
+    render::Backend::set_index_buffer(&mut model.index_buffer);
     let mesh = &mut model.meshes[0];
     let sub_mesh = &mesh.sub_meshes[0];
 
     unsafe {
         gl::ActiveTexture(gl::TEXTURE0);
         gl::BindTexture(gl::TEXTURE_CUBE_MAP, skybox_texture.id);
-
-        render::Backend::set_vertex_buffer(&mut mesh.vertex_buffer);
-        render::Backend::set_attributes(&mesh.attributes);
-        render::Backend::set_index_buffer(&mut mesh.index_buffer);
 
         let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
         gl::DrawElements(
@@ -623,16 +603,15 @@ fn render_model(
     for entity in render_args.entities {
         let mut model = entity.model.borrow_mut();
         let model_matrix = &entity.transform.matrix();
-        let material = &entity.material;
-        for mesh in &mut model.meshes {
-            render::Backend::set_vertex_buffer(&mut mesh.vertex_buffer);
-            render::Backend::set_attributes(&mesh.attributes);
-            render::Backend::set_index_buffer(&mut mesh.index_buffer);
-
+        render::Backend::set_vertex_buffer(&mut model.vertex_buffer);
+        render::Backend::set_attributes(&model.attributes);
+        render::Backend::set_index_buffer(&mut model.index_buffer);
+        for mesh in &model.meshes {
             for sub_mesh in &mesh.sub_meshes {
                 unsafe {
                     gl::UseProgram(pipeline.id);
 
+                    let material = &model.materials[sub_mesh.material_index];
                     let camera_position = &camera.position;
                     pipeline.set_uniform_mat4("model\0", &model_matrix);
                     pipeline.set_uniform_mat4("projection\0", &render_args.projection_matrix);
@@ -647,16 +626,49 @@ fn render_model(
                     pipeline.set_uniform_1i("u_albedoMap\0", 0);
                     pipeline.set_uniform_1i("u_normalMap\0", 1);
                     pipeline.set_uniform_1i("u_metallicMap\0", 2);
-                    pipeline.set_uniform_1i("u_brdfMap\0", 3);
-                    pipeline.set_uniform_1i("u_irradianceMap\0", 4);
-                    pipeline.set_uniform_1i("u_prefilterMap\0", 5);
+                    pipeline.set_uniform_1i("u_emissiveMap\0", 3);
+                    pipeline.set_uniform_1i("u_brdfMap\0", 4);
+                    pipeline.set_uniform_1i("u_irradianceMap\0", 5);
+                    pipeline.set_uniform_1i("u_prefilterMap\0", 6);
 
-                    enable_texture(gl::TEXTURE_2D, 0, texture_cache.white_texture.id);
-                    enable_texture(gl::TEXTURE_2D, 1, texture_cache.blue_texture.id);
-                    enable_texture(gl::TEXTURE_2D, 2, texture_cache.gray_texture.id);
-                    enable_texture(gl::TEXTURE_2D, 3, skybox.brdf.id);
-                    enable_texture(gl::TEXTURE_CUBE_MAP, 4, skybox.irradiance.id);
-                    enable_texture(gl::TEXTURE_CUBE_MAP, 5, skybox.prefilter.id);
+                    enable_texture(
+                        gl::TEXTURE_2D,
+                        0,
+                        match material.albedo_map.as_ref() {
+                            None => texture_cache.white_texture.id,
+                            Some(texture) => texture.id,
+                        },
+                    );
+                    enable_texture(
+                        gl::TEXTURE_2D,
+                        1,
+                        match material.normal_map.as_ref() {
+                            None => texture_cache.blue_texture.id,
+                            Some(texture) => texture.id,
+                        },
+                    );
+
+                    enable_texture(
+                        gl::TEXTURE_2D,
+                        2,
+                        match material.specular_map.as_ref() {
+                            None => texture_cache.gray_texture.id,
+                            Some(texture) => texture.id,
+                        },
+                    );
+
+                    enable_texture(
+                        gl::TEXTURE_2D,
+                        3,
+                        match material.emissive_map.as_ref() {
+                            None => texture_cache.black_texture.id,
+                            Some(texture) => texture.id,
+                        },
+                    );
+
+                    enable_texture(gl::TEXTURE_2D, 4, skybox.brdf.id);
+                    enable_texture(gl::TEXTURE_CUBE_MAP, 5, skybox.irradiance.id);
+                    enable_texture(gl::TEXTURE_CUBE_MAP, 6, skybox.prefilter.id);
 
                     let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
                     gl::DrawElements(

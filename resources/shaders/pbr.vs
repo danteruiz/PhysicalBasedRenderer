@@ -10,10 +10,12 @@ uniform mat4 view;
 
 out vec3 vertex_normal;
 out vec3 vertex_position;
+out vec2 vertex_tex_coord;
 
 void main() {
     mat3 model_mat3 = mat3(model);
     vertex_position = vec3(model * vec4(aPos, 1.0));
     vertex_normal = normalize(model_mat3 * aNormal);
+    vertex_tex_coord = aTexCoord;
     gl_Position = projection * view * model * vec4(aPos, 1.0f);
 }

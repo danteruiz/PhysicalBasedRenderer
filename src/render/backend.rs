@@ -61,7 +61,11 @@ impl Backend {
             if buffer.dirty {
                 let data_size = (buffer.data.len() * std::mem::size_of::<u8>()) as isize;
                 let data = buffer.data.as_ptr().cast();
+
+                println!("data size: {}", data_size);
                 gl::BufferData(resource_type, data_size, data, gl::DYNAMIC_DRAW);
+
+                buffer.dirty = false;
             }
         }
     }

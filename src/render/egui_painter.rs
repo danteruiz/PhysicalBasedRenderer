@@ -215,7 +215,6 @@ fn generate_gl_texture_from_egui_color_image(
 }
 
 fn generate_gl_texture_from_egui_front_image(image: &egui::FontImage) -> texture::TexturePointer {
-    println!("font image");
     let pixel_iterator = image.srgba_pixels(1.0);
     let mut pixels: Vec<u8> = Vec::with_capacity(pixel_iterator.len() * 4);
 

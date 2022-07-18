@@ -18,4 +18,6 @@ pub use buffer::Buffer;
 pub use model::{Model, ModelCache, Shape, SubMesh};
 pub mod gl_utils;
 pub use backend::*;
+pub mod material;
 pub mod resource;
+pub use material::Material;

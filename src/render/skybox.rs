@@ -175,13 +175,12 @@ fn generate_skybox_texture(
 
             let model = &mut model_cache.shape(&model::Shape::Cube).borrow_mut();
 
+            Backend::set_vertex_buffer(&mut model.vertex_buffer);
+            Backend::set_attributes(&model.attributes);
+            Backend::set_index_buffer(&mut model.index_buffer);
+
             let mesh = &mut model.meshes[0];
             let sub_mesh = &mesh.sub_meshes[0];
-
-            Backend::set_vertex_buffer(&mut mesh.vertex_buffer);
-            Backend::set_attributes(&mesh.attributes);
-            Backend::set_index_buffer(&mut mesh.index_buffer);
-
             let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
             gl::DrawElements(
                 gl::TRIANGLES,
@@ -295,13 +294,13 @@ fn generate_irradiance_map(
         gl::BindFramebuffer(gl::FRAMEBUFFER, capture_fbo);
 
         let cube_model = &mut model_cache.shape(&model::Shape::Cube).borrow_mut();
+
+        Backend::set_vertex_buffer(&mut cube_model.vertex_buffer);
+        Backend::set_attributes(&cube_model.attributes);
+        Backend::set_index_buffer(&mut cube_model.index_buffer);
+
         let mesh = &mut cube_model.meshes[0];
         let sub_mesh: &model::SubMesh = &mesh.sub_meshes[0];
-
-        Backend::set_vertex_buffer(&mut mesh.vertex_buffer);
-        Backend::set_attributes(&mesh.attributes);
-        Backend::set_index_buffer(&mut mesh.index_buffer);
-
         for index in 0..6 {
             irrandiance_pipeline.set_uniform_mat4("view\0", &capture_views[index]);
             let texture_target = gl::TEXTURE_CUBE_MAP_POSITIVE_X + index as u32;
@@ -423,12 +422,12 @@ fn generate_prefilter_texture(
         let max_mip_levels = 5;
 
         let mut cube_model = model_cache.shape(&model::Shape::Cube).borrow_mut();
+
+        Backend::set_vertex_buffer(&mut cube_model.vertex_buffer);
+        Backend::set_attributes(&cube_model.attributes);
+        Backend::set_index_buffer(&mut cube_model.index_buffer);
         let mesh = &mut cube_model.meshes[0];
         let sub_mesh = &mesh.sub_meshes[0];
-
-        Backend::set_vertex_buffer(&mut mesh.vertex_buffer);
-        Backend::set_attributes(&mesh.attributes);
-        Backend::set_index_buffer(&mut mesh.index_buffer);
         for mip in 0..max_mip_levels {
             let pow = 0.5f64.powf(mip as f64);
             let mip_width: u32 = (128.0 * pow) as u32;
@@ -540,13 +539,19 @@ fn generte_brdf_texture(model_cache: &mut model::ModelCache) -> texture::Texture
 
         gl::UseProgram(brdf_pipeline.id);
         let mut quad_model = model_cache.shape(&model::Shape::Quad).borrow_mut();
+
+        {
+            Backend::set_vertex_buffer(&mut quad_model.vertex_buffer);
+        }
+
+        Backend::set_attributes(&quad_model.attributes);
+
+        {
+            Backend::set_index_buffer(&mut quad_model.index_buffer);
+        }
+
         let mesh = &mut quad_model.meshes[0];
         let sub_mesh: &model::SubMesh = &mesh.sub_meshes[0];
-
-        Backend::set_vertex_buffer(&mut mesh.vertex_buffer);
-        Backend::set_attributes(&mesh.attributes);
-        Backend::set_index_buffer(&mut mesh.index_buffer);
-
         let start_index = sub_mesh.start_index * std::mem::size_of::<u32>();
         gl::DrawElements(
             gl::TRIANGLES,

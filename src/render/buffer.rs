@@ -10,7 +10,6 @@ use std::ops::Drop;
 
 use super::*;
 
-#[derive(Default)]
 pub struct Buffer {
     pub data: Vec<u8>,
     pub(crate) gpu_resource: resource::GPUResource,
@@ -30,9 +29,23 @@ impl Buffer {
     }
 }
 
+impl Default for Buffer {
+    fn default() -> Self {
+        Self {
+            data: Vec::new(),
+            gpu_resource: resource::GPUResource {
+                handle: 0,
+                resource_type: 0,
+            },
+            dirty: true,
+        }
+    }
+}
+
 impl Drop for Buffer {
     fn drop(&mut self) {
         unsafe {
+            println!("deleting buffer: {}", self.gpu_resource.resource_type);
             gl::DeleteBuffers(
                 self.gpu_resource.resource_type as i32,
                 &self.gpu_resource.handle,

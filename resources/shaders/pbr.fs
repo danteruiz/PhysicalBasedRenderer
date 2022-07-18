@@ -26,6 +26,7 @@ layout (std140, binding = 0) uniform Lights {
 uniform sampler2D u_albedoMap;
 uniform sampler2D u_normalMap;
 uniform sampler2D u_metallicMap;
+uniform sampler2D u_emissiveMap;
 uniform sampler2D u_brdfMap;
 uniform samplerCube u_irradianceMap;
 uniform samplerCube u_prefilterMap;
@@ -41,6 +42,7 @@ struct PBRInfo {
 
 in vec3 vertex_normal;
 in vec3 vertex_position;
+in vec2 vertex_tex_coord;
 
 out vec4 FragColor;
 
@@ -49,25 +51,45 @@ vec3 getSurfaceRelectance(inout PBRInfo surface, float NdotL, float NdotH, float
     return vec3(1.0);
 }
 
+vec3 getNormal(vec3 view)
+{
+    vec3 tangentNormal = texture2D(u_normalMap, vertex_tex_coord).rgb  * 2.0 - 1.0;
+
+    //tangentNormal = tangentNormal * 255./127. - 128./127.;
+    vec3 q1 = dFdx(view);
+    vec3 q2 = dFdy(view);
+    vec2 st1 = dFdx(vertex_tex_coord);
+    vec2 st2 = dFdy(vertex_tex_coord);
+
+    vec3 N = normalize(vertex_normal);
+    vec3 T = normalize(q1 * st2.t - q2 * st1.t);
+    vec3 B = normalize(cross(N,T));
+
+    mat3 TBN = mat3(T, B, N);
+    return normalize(TBN * tangentNormal);
+
+    //return getPerturbNormal(vNormal, vPosition, TexCoord);
+
+}
+
 void main() {
-    vec2 a_textCoord = vec2(0.0);
 
     PBRInfo surface;
-    surface.baseColor = texture(u_albedoMap, a_textCoord).rgb * material.color;
+    surface.baseColor = texture(u_albedoMap, vertex_tex_coord).rgb * material.color;
     surface.roughness = material.roughness;
     surface.metallic = material.metallic;
 
-    vec4 materialRoughnessSample = texture(u_metallicMap, a_textCoord);
+    vec4 materialRoughnessSample = texture(u_metallicMap, vertex_tex_coord);
     surface.roughness *= materialRoughnessSample.g;
     surface.metallic *= materialRoughnessSample.b;
     vec3 F0 = vec3(0.04);
 
-    surface.f0 = F0;// mix(F0, surface.baseColor, surface.metallic);
+    surface.f0 =  mix(F0, surface.baseColor, surface.metallic);
 
     vec3 lo = vec3(0.0);
 
-    vec3 N = normalize(vertex_normal);
     vec3 V = normalize(camera_position - vertex_position);
+    vec3 N = getNormal(-V);
     vec3 reflection = -reflect(V, N);
     float NdotV = max(abs(dot(N, V)), 0.001);
 
@@ -98,18 +120,23 @@ void main() {
         vec3 Fd = (1.0 - F);
         Fd = Fd * surface.baseColor / PI;
         lo += (Fr + Fd) * radiance * NdotL;
+
+        vec3 specularLightColor = textureLod(u_prefilterMap, reflection, surface.roughness * 4.0).rgb;
+        vec2 brdfColor = texture(u_brdfMap, vec2(NdotV, surface.roughness)).rg;
+        vec3 specularColor = specularLightColor * (F * brdfColor.x + brdfColor.y);
+
+        //lo += specularColor;
     }
 
+     vec3 irradianceColor = texture(u_irradianceMap, N).rgb;
+     lo += irradianceColor * surface.baseColor;
 
-    vec3 irradianceColor = texture(u_irradianceMap, N).rgb;
-    vec3 specularLightColor = textureLod(u_prefilterMap, reflection, surface.roughness * 4.0).rgb;
-    vec2 brdfColor = texture(u_brdfMap, vec2(NdotV, surface.roughness)).rg;
-    vec3 specularColor = specularLightColor * (brdfColor.x + brdfColor.y);
-
-    //lo += irradianceColor * material.color;;
 
     vec3 ambient = vec3(0.08) * surface.baseColor;
 
-    lo += ambient;
+    vec3 emissive = texture(u_emissiveMap, vertex_tex_coord).rgb * 1.0;
+    lo += emissive;
+
+    //lo += ambient;
     FragColor = vec4(lo, material.ao);
 }

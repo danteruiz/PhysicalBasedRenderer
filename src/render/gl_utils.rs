@@ -50,6 +50,12 @@ impl From<stream::Format> for gl::types::GLenum {
                 stream::Usage::RGBA => gl::RGBA16UI,
                 _ => gl::RED,
             },
+            stream::Type::UINT8 => match format.usage {
+                stream::Usage::RG => gl::RG8UI,
+                stream::Usage::RGB => gl::RGB8UI,
+                stream::Usage::RGBA => gl::RGBA8UI,
+                _ => gl::RED,
+            },
             stream::Type::UINT32 => match format.usage {
                 stream::Usage::RG => gl::RG32UI,
                 stream::Usage::RGB => gl::RGB32UI,

@@ -65,10 +65,10 @@ pub fn load_hdr_texture(path: &'static str) -> (Vec<u8>, u32, u32) {
 }
 
 pub struct TextureDesc {
-    wrap_s: WrapMode,
-    wrap_t: WrapMode,
-    min_filter: Filter,
-    mag_filter: Filter,
+    pub wrap_s: WrapMode,
+    pub wrap_t: WrapMode,
+    pub min_filter: Filter,
+    pub mag_filter: Filter,
 }
 
 impl Default for TextureDesc {
@@ -121,6 +121,7 @@ impl Texture {
             let data_format = GLenum::from(format.usage);
             let data_type = GLenum::from(format._type);
 
+            println!("importing data: {}", pixels.len());
             gl::TexImage2D(
                 gl::TEXTURE_2D,
                 0,
