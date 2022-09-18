@@ -120,8 +120,6 @@ impl Texture {
 
             let data_format = GLenum::from(format.usage);
             let data_type = GLenum::from(format._type);
-
-            println!("importing data: {}", pixels.len());
             gl::TexImage2D(
                 gl::TEXTURE_2D,
                 0,

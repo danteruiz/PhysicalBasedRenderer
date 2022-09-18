@@ -10,6 +10,8 @@ use std::ops::Drop;
 
 use super::*;
 
+use gl::types::GLenum;
+
 pub struct Buffer {
     pub data: Vec<u8>,
     pub(crate) gpu_resource: resource::GPUResource,
@@ -22,7 +24,7 @@ impl Buffer {
             data,
             gpu_resource: resource::GPUResource {
                 handle: 0,
-                resource_type: 0,
+                resource_type: resource::Type::Invalid,
             },
             dirty: true,
         }
@@ -35,7 +37,7 @@ impl Default for Buffer {
             data: Vec::new(),
             gpu_resource: resource::GPUResource {
                 handle: 0,
-                resource_type: 0,
+                resource_type: resource::Type::Invalid,
             },
             dirty: true,
         }
@@ -44,12 +46,13 @@ impl Default for Buffer {
 
 impl Drop for Buffer {
     fn drop(&mut self) {
-        unsafe {
-            println!("deleting buffer: {}", self.gpu_resource.resource_type);
-            gl::DeleteBuffers(
-                self.gpu_resource.resource_type as i32,
-                &self.gpu_resource.handle,
-            );
+        if self.gpu_resource.resource_type != resource::Type::Invalid {
+            unsafe {
+                println!("deleting buffer: {:?}", self.gpu_resource.resource_type);
+
+                let resource_type = GLenum::from(self.gpu_resource.resource_type.clone());
+                gl::DeleteBuffers(resource_type as i32, &self.gpu_resource.handle);
+            }
         }
     }
 }

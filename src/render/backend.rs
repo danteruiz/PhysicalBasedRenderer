@@ -6,6 +6,8 @@
 // Distributed under the MIT Lisense
 // https://mit-license.org/
 
+use gl::types::GLenum;
+
 use super::*;
 //use crate::math;
 
@@ -40,30 +42,34 @@ impl Backend {
     }
 
     pub fn set_index_buffer(buffer: &mut buffer::Buffer) {
-        Backend::sync_buffer(buffer, gl::ELEMENT_ARRAY_BUFFER);
+        Backend::sync_buffer(buffer, resource::Type::IndexBuffer);
     }
 
     pub fn set_vertex_buffer(buffer: &mut buffer::Buffer) {
-        Backend::sync_buffer(buffer, gl::ARRAY_BUFFER);
+        Backend::sync_buffer(buffer, resource::Type::ArrayBuffer);
     }
 
-    fn sync_buffer(buffer: &mut buffer::Buffer, resource_type: u32) {
+    pub fn set_uniform_buffer(buffer: &mut buffer::Buffer) {
+        Backend::sync_buffer(buffer, resource::Type::UniformBuffer);
+    }
+
+    fn sync_buffer(buffer: &mut buffer::Buffer, resource_type: resource::Type) {
         unsafe {
             let gpu_resource = &mut buffer.gpu_resource;
 
-            if gpu_resource.handle == 0 {
+            if gpu_resource.resource_type == resource::Type::Invalid {
                 gl::GenBuffers(1, &mut gpu_resource.handle);
                 gpu_resource.resource_type = resource_type;
             }
 
-            let resource_type = gpu_resource.resource_type;
-            gl::BindBuffer(resource_type, gpu_resource.handle);
+            let resource_type = GLenum::from(gpu_resource.resource_type.clone());
+            gl::BindBuffer(resource_type.into(), gpu_resource.handle);
             if buffer.dirty {
                 let data_size = (buffer.data.len() * std::mem::size_of::<u8>()) as isize;
                 let data = buffer.data.as_ptr().cast();
 
                 println!("data size: {}", data_size);
-                gl::BufferData(resource_type, data_size, data, gl::DYNAMIC_DRAW);
+                gl::BufferData(resource_type.into(), data_size, data, gl::DYNAMIC_DRAW);
 
                 buffer.dirty = false;
             }

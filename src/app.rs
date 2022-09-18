@@ -327,7 +327,6 @@ impl App {
                 transform: iml::Transform::new(iml::Point3::new(0.0, 0.0, 0.0)),
                 model: gltf_model,
             });
-            println!("add gltf model");
         } else {
             println!("failed to load model");
         }

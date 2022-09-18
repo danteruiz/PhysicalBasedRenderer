@@ -231,11 +231,8 @@ fn generate_cube_model() -> ModelPointer {
     let index_buffer = buffer::Buffer::new(index_buffer_data);
 
     let mesh: Mesh = Mesh {
-        // index_buffer,
-        // vertex_buffer,
         matrix: iml::Mat4::identity(),
         sub_meshes: vec![sub_mesh],
-        //        attributes: vec![position_attribute, normal_attribute],
     };
 
     ModelPointer::new(Model {
@@ -340,7 +337,6 @@ fn process_gltf_node_tree<F: FnMut(&gltf::scene::Node, iml::Mat4)>(
 ) {
     callback(&node, matrix);
     for child in node.children() {
-        println!("process child node");
         process_gltf_node_tree(&child, matrix, callback);
     }
 }
@@ -429,13 +425,11 @@ pub fn load_gltf_model(path: String) -> Result<ModelPointer, String> {
         let mut indices: Vec<u32> = Vec::new();
 
         let mut process_node = |node: &gltf::scene::Node, transform: iml::Mat4| {
-            println!("process node is being called");
             if let Some(gltf_mesh) = node.mesh() {
                 let mut mesh = Mesh::default();
                 for prim in gltf_mesh.primitives() {
                     let reader = prim.reader(|buffer| Some(&buffers[buffer.index()]));
 
-                    println!("--- load gltf material");
                     let material = load_gltf_material(&prim.material(), &images);
 
                     let gltf_positions = if let Some(iterator) = reader.read_positions() {
@@ -482,10 +476,8 @@ pub fn load_gltf_model(path: String) -> Result<ModelPointer, String> {
 
         let matrix = iml::Mat4::identity();
         for node in scene.nodes() {
-            println!("calling root process");
             process_gltf_node_tree(&node, matrix, &mut process_node);
         }
-        println!("model meshes length: {}", model.meshes.len());
 
         let position_attribute: Attribute = Attribute {
             format: Format::new(Dimension::VEC3, Type::FLOAT, Usage::DATA),

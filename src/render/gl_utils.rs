@@ -10,7 +10,7 @@ use gl;
 
 use std::convert::From;
 
-use super::{stream, texture};
+use super::{resource, stream, texture};
 
 impl From<stream::Usage> for gl::types::GLenum {
     fn from(usage: stream::Usage) -> gl::types::GLenum {
@@ -110,6 +110,19 @@ impl From<texture::Filter> for gl::types::GLenum {
             texture::Filter::LINEAR_MIP_NEAREST => gl::LINEAR_MIPMAP_NEAREST,
             texture::Filter::NEAREST_MIP_LINEAR => gl::NEAREST_MIPMAP_LINEAR,
             _ => gl::LINEAR_MIPMAP_LINEAR,
+        }
+    }
+}
+
+impl From<resource::Type> for gl::types::GLenum {
+    fn from(resource_type: resource::Type) -> gl::types::GLenum {
+        match resource_type {
+            resource::Type::IndexBuffer => gl::ELEMENT_ARRAY_BUFFER,
+            resource::Type::ArrayBuffer => gl::ARRAY_BUFFER,
+            resource::Type::UniformBuffer => gl::UNIFORM_BUFFER,
+            resource::Type::Framebuffer => gl::FRAMEBUFFER,
+            resource::Type::Texture => gl::TEXTURE,
+            _ => panic!("unsupported converstion to GL object"),
         }
     }
 }
