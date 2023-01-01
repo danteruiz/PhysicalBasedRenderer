@@ -8,6 +8,7 @@
 
 //extern crate ahash;
 extern crate ahash;
+extern crate ash;
 extern crate egui;
 extern crate gl;
 extern crate glfw;
@@ -16,13 +17,16 @@ extern crate iml;
 extern crate rspirv;
 
 mod app;
-mod clock;
-mod file_watcher;
-mod render;
-mod ui;
+// mod clock;
+// mod file_watcher;
+// mod render;
+// mod ui;
 
 fn main() {
-    let application = app::App::init(1080, 1080);
-
-    application.run();
+    match app::App::init(1080, 1080) {
+        Ok(application) => {
+            application.run();
+        }
+        Err(error) => println!("error: {:?}", error),
+    }
 }

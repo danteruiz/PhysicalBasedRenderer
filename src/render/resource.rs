@@ -1,5 +1,3 @@
-use std::default;
-
 // resource.rs
 //
 // Created on 2022/01/23 by Dante Ruiz

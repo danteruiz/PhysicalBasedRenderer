@@ -56,9 +56,3 @@ impl Drop for Buffer {
         }
     }
 }
-
-// pub struct BufferView {
-//     buffer: *const Buffer,
-//     offset: usize,
-//     size: usize,
-// }
